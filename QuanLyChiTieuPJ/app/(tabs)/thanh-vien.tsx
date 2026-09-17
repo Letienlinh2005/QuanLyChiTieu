@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAppStore } from '../../src/store/appStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { useThanhVienSo, useMoiThanhVien, useXoaThanhVien } from '../../src/hooks/useSoChiTieu';
+import { useAppTheme } from '../../src/store/themeStore';
 
 export default function ThanhVienScreen() {
     const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
-    const thongTinUser = useAppStore((s) => s.thongTinUser);
+    const thongTinUser = useAuthStore((s) => s.nguoiDung);
+    const { colors } = useAppTheme();
     
     const { data: thanhVien, isLoading } = useThanhVienSo(maSoChiTieu);
     const moiThanhVien = useMoiThanhVien(maSoChiTieu);
@@ -60,33 +64,34 @@ export default function ThanhVienScreen() {
 
     if (isLoading) {
         return (
-            <View style={styles.loadingContainer}>
-                <Text>Đang tải danh sách thành viên...</Text>
+            <View style={[styles.loadingContainer, { backgroundColor: colors.bg }]}>
+                <Text style={{ color: colors.textMuted }}>Đang tải danh sách thành viên...</Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
+            <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.nutBack}>
-                    <Text style={styles.chuBack}>‹ Quay lại</Text>
+                    <Text style={[styles.chuBack, { color: colors.primary }]}>‹ Quay lại</Text>
                 </TouchableOpacity>
-                <Text style={styles.title}>Thành viên sổ</Text>
+                <Text style={[styles.title, { color: colors.text }]}>Thành viên sổ</Text>
                 <View style={{ width: 80 }} />
             </View>
 
-            <View style={styles.formMoi}>
+            <View style={[styles.formMoi, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TextInput
-                    style={styles.inputMoi}
+                    style={[styles.inputMoi, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
                     placeholder="Nhập email người dùng..."
+                    placeholderTextColor={colors.textMuted}
                     value={emailMoi}
                     onChangeText={setEmailMoi}
                     keyboardType="email-address"
                     autoCapitalize="none"
                 />
                 <TouchableOpacity 
-                    style={styles.nutMoi} 
+                    style={[styles.nutMoi, { backgroundColor: colors.primary }]} 
                     onPress={xuLyMoi}
                     disabled={moiThanhVien.isPending}
                 >
@@ -101,10 +106,10 @@ export default function ThanhVienScreen() {
                 keyExtractor={(item) => String(item.maNguoiDung)}
                 contentContainerStyle={styles.list}
                 renderItem={({ item }) => (
-                    <View style={styles.card}>
+                    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <View style={styles.thongTin}>
-                            <Text style={styles.email}>{item.hoTen} ({item.email})</Text>
-                            <Text style={styles.vaiTro}>
+                            <Text style={[styles.email, { color: colors.text }]}>{item.hoTen} ({item.email})</Text>
+                            <Text style={[styles.vaiTro, { color: colors.textMuted }]}>
                                 Vai trò: {item.vaiTro === 'ChuSo' ? 'Chủ sổ' : item.vaiTro === 'QuanTri' ? 'Quản trị' : 'Thành viên'}
                             </Text>
                         </View>
@@ -119,39 +124,36 @@ export default function ThanhVienScreen() {
                     </View>
                 )}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9fafb' },
+    container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        padding: 16, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e7eb',
+        padding: 16, borderBottomWidth: 1,
     },
     nutBack: { width: 80 },
-    chuBack: { color: '#2563eb', fontSize: 16 },
+    chuBack: { fontSize: 16, fontWeight: '600' },
     title: { fontSize: 18, fontWeight: 'bold' },
     
     formMoi: {
         flexDirection: 'row',
         padding: 16,
-        backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderColor: '#e5e7eb',
         gap: 8,
     },
     inputMoi: {
         flex: 1,
         borderWidth: 1,
-        borderColor: '#ddd',
         borderRadius: 8,
         paddingHorizontal: 12,
         height: 44,
+        fontSize: 15,
     },
     nutMoi: {
-        backgroundColor: '#2563eb',
         justifyContent: 'center',
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -161,18 +163,16 @@ const styles = StyleSheet.create({
     
     list: { padding: 16, gap: 12 },
     card: {
-        backgroundColor: '#fff',
         padding: 16,
         borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         borderWidth: 1,
-        borderColor: '#e5e7eb',
     },
     thongTin: { flex: 1 },
-    email: { fontSize: 16, fontWeight: '500', color: '#111827', marginBottom: 4 },
-    vaiTro: { fontSize: 13, color: '#6b7280' },
+    email: { fontSize: 15, fontWeight: '500', marginBottom: 4 },
+    vaiTro: { fontSize: 13 },
     nutXoa: { padding: 8 },
     chuXoa: { color: '#ef4444', fontWeight: '600' },
 });

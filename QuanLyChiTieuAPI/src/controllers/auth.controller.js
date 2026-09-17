@@ -104,14 +104,15 @@ exports.dangNhap = async (req, res) => {
         }
 
         const nguoiDung = rows[0];
+
+        if (!nguoiDung.DangHoatDong) {
+            return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
+        }
+
         const dungMatKhau = await bcrypt.compare(matKhau, nguoiDung.MatKhauHash);
 
         if (!dungMatKhau) {
             return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
-        }
-
-        if (!nguoiDung.DangHoatDong) {
-            return res.status(403).json({ message: 'Tài khoản đã bị khóa.' });
         }
 
         const token = taoToken(nguoiDung);

@@ -22,7 +22,7 @@ exports.layDanhSachCuaToi = async (req, res) => {
 
 // 1. Lấy danh sách thành viên của 1 sổ
 exports.layDanhSachThanhVien = async (req, res) => {
-    const { id } = req.params; // maSoChiTieu
+    const { id } = req.params;
     try {
         const [rows] = await pool.query(
             `SELECT tv.MaNguoiDung, tv.VaiTro, tv.NgayThamGia, nd.Email, nd.HoTen

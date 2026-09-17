@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { xacThuc } = require('../middlewares/auth.middleware');
 
 router.post('/dang-ky', authController.dangKy);
 router.post('/dang-nhap', authController.dangNhap);

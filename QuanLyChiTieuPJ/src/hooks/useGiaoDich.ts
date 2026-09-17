@@ -16,9 +16,13 @@ export function useTaoGiaoDich() {
   return useMutation({
     mutationFn: giaoDichApi.taoMoi,
     onSuccess: (_, variables) => {
-      // Làm mới danh sách giao dịch và số dư ví liên quan
-      queryClient.invalidateQueries({ queryKey: ['giao-dich', variables.maSoChiTieu] });
-      queryClient.invalidateQueries({ queryKey: ['vi', variables.maSoChiTieu] });
+      // Làm mới danh sách giao dịch, số dư ví, báo cáo và ngân sách liên quan
+      const maSo = variables.maSoChiTieu;
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['vi', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSo] });
     },
   });
 }
@@ -31,6 +35,9 @@ export function useCapNhatGiaoDich(maSoChiTieu: number | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giao-dich', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSoChiTieu] });
     },
   });
 }
@@ -43,6 +50,9 @@ export function useXoaGiaoDich(maSoChiTieu: number | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giao-dich', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSoChiTieu] });
     },
   });
 }

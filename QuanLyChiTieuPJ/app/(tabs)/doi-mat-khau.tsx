@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { apiClient } from '../../src/api/client';
+import { useAppTheme } from '../../src/store/themeStore';
 
 export default function DoiMatKhauScreen() {
+    const { colors } = useAppTheme();
     const [matKhauCu, setMatKhauCu] = useState('');
     const [matKhauMoi, setMatKhauMoi] = useState('');
     const [xacNhanMatKhau, setXacNhanMatKhau] = useState('');
@@ -43,73 +46,79 @@ export default function DoiMatKhauScreen() {
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
+            <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.nutBack}>
-                    <Text style={styles.chuBack}>‹ Quay lại</Text>
+                    <Text style={[styles.chuBack, { color: colors.primary }]}>‹ Quay lại</Text>
                 </TouchableOpacity>
-                <Text style={styles.title}>Đổi mật khẩu</Text>
+                <Text style={[styles.title, { color: colors.text }]}>Đổi mật khẩu</Text>
                 <View style={{ width: 80 }} />
             </View>
 
-            <View style={styles.content}>
-                <Text style={styles.label}>Mật khẩu cũ</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Nhập mật khẩu hiện tại"
-                    secureTextEntry
-                    value={matKhauCu}
-                    onChangeText={setMatKhauCu}
-                />
+            <ScrollView style={[styles.container, { backgroundColor: colors.bg }]}>
+                <View style={styles.content}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Mật khẩu cũ</Text>
+                    <TextInput
+                        style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
+                        placeholder="Nhập mật khẩu hiện tại"
+                        placeholderTextColor={colors.textMuted}
+                        secureTextEntry
+                        value={matKhauCu}
+                        onChangeText={setMatKhauCu}
+                    />
 
-                <Text style={styles.label}>Mật khẩu mới</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Ít nhất 6 ký tự"
-                    secureTextEntry
-                    value={matKhauMoi}
-                    onChangeText={setMatKhauMoi}
-                />
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Mật khẩu mới</Text>
+                    <TextInput
+                        style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
+                        placeholder="Ít nhất 6 ký tự"
+                        placeholderTextColor={colors.textMuted}
+                        secureTextEntry
+                        value={matKhauMoi}
+                        onChangeText={setMatKhauMoi}
+                    />
 
-                <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Nhập lại mật khẩu mới"
-                    secureTextEntry
-                    value={xacNhanMatKhau}
-                    onChangeText={setXacNhanMatKhau}
-                />
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Xác nhận mật khẩu mới</Text>
+                    <TextInput
+                        style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
+                        placeholder="Nhập lại mật khẩu mới"
+                        placeholderTextColor={colors.textMuted}
+                        secureTextEntry
+                        value={xacNhanMatKhau}
+                        onChangeText={setXacNhanMatKhau}
+                    />
 
-                <TouchableOpacity
-                    style={styles.nutLuu}
-                    onPress={xuLyDoiMatKhau}
-                    disabled={isPending}
-                >
-                    <Text style={styles.nutLuuChu}>
-                        {isPending ? 'Đang xử lý...' : 'Đổi mật khẩu'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+                    <TouchableOpacity
+                        style={[styles.nutLuu, { backgroundColor: colors.primary }]}
+                        onPress={xuLyDoiMatKhau}
+                        disabled={isPending}
+                    >
+                        <Text style={styles.nutLuuChu}>
+                            {isPending ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9fafb' },
+    safeArea: { flex: 1 },
+    container: { flex: 1 },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        padding: 16, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e7eb',
+        padding: 16, borderBottomWidth: 1,
     },
     nutBack: { width: 80 },
-    chuBack: { color: '#2563eb', fontSize: 16 },
+    chuBack: { fontSize: 16, fontWeight: '600' },
     title: { fontSize: 18, fontWeight: 'bold' },
     content: { padding: 20 },
-    label: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 16, color: '#374151' },
+    label: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 16 },
     input: {
-        borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 14, fontSize: 16, backgroundColor: '#fff'
+        borderWidth: 1, borderRadius: 8, padding: 14, fontSize: 16,
     },
     nutLuu: {
-        backgroundColor: '#2563eb', borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 32,
+        borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 32,
     },
     nutLuuChu: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

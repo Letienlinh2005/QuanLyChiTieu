@@ -1,8 +1,5 @@
 const pool = require('../config/database');
 
-// Lấy ngân sách theo tháng, kèm số tiền đã chi thực tế của từng danh mục
-// (tính từ bảng GiaoDich) để tiện hiển thị thanh tiến độ ở app.
-// Hiện tại chỉ hỗ trợ ngân sách theo chu kỳ HangThang.
 exports.layDanhSach = async (req, res) => {
     const { maSoChiTieu, thang, nam } = req.query;
 
