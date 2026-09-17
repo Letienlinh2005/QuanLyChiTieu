@@ -5,8 +5,7 @@ import { NguoiDung } from '../types/nguoiDung';
 interface AuthState {
   nguoiDung: NguoiDung | null;
   token: string | null;
-  dangTai: boolean;
-  daKhoiTao: boolean;
+  daKhoiTao: boolean; // đã đọc xong bộ nhớ lúc mở app hay chưa
 
   dangNhapThanhCong: (token: string, nguoiDung: NguoiDung) => Promise<void>;
   dangXuat: () => Promise<void>;
@@ -16,25 +15,28 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   nguoiDung: null,
   token: null,
-  dangTai: false,
   daKhoiTao: false,
 
   dangNhapThanhCong: async (token, nguoiDung) => {
     await SecureStore.setItemAsync('auth_token', token);
+    await SecureStore.setItemAsync('auth_nguoiDung', JSON.stringify(nguoiDung));
     set({ token, nguoiDung });
   },
 
   dangXuat: async () => {
     await SecureStore.deleteItemAsync('auth_token');
+    await SecureStore.deleteItemAsync('auth_nguoiDung');
     set({ token: null, nguoiDung: null });
   },
 
-  // Gọi 1 lần khi app khởi động để tự đăng nhập lại nếu còn token
   khoiTaoTuBoNho: async () => {
-    set({ dangTai: true });
-    const token = await SecureStore.getItemAsync('auth_token');
-    // Ở đây có thể gọi thêm API /auth/me để lấy lại thông tin NguoiDung
-    // Tạm thời chỉ khôi phục token, để đơn giản cho bước đầu
-    set({ token, dangTai: false, daKhoiTao: true });
+    try {
+      const token = await SecureStore.getItemAsync('auth_token');
+      const nguoiDungJson = await SecureStore.getItemAsync('auth_nguoiDung');
+      const nguoiDung = nguoiDungJson ? JSON.parse(nguoiDungJson) : null;
+      set({ token, nguoiDung, daKhoiTao: true });
+    } catch {
+      set({ token: null, nguoiDung: null, daKhoiTao: true });
+    }
   },
 }));

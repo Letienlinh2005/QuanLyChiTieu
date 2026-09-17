@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Quản trị · Sổ Chi Tiêu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10233D;
+    --ink-soft:#1B3358;
+    --bg:#F4F6F8;
+    --surface:#FFFFFF;
+    --border:#E2E6EB;
+    --text:#152033;
+    --text-muted:#66738A;
+    --primary:#0F766E;
+    --primary-soft:#E4F3F1;
+    --warn:#B7791F;
+    --warn-soft:#FBF0DD;
+    --danger:#B42318;
+    --danger-soft:#FCEBEA;
+    --success:#15803D;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+  table{font-variant-numeric:tabular-nums;}
+
+  .shell{display:flex;min-height:100vh;}
+
+  .sidebar{
+    width:232px;flex-shrink:0;background:var(--ink);color:#CBD5E1;
+    padding:24px 16px;display:flex;flex-direction:column;gap:4px;
+  }
+  .brand{color:#fff;font-weight:700;font-size:16px;padding:4px 12px 20px;letter-spacing:-0.01em;}
+  .brand span{color:#7FD8CE;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+    cursor:pointer;color:#B7C2D0;font-weight:500;transition:background .12s,color .12s;
+  }
+  .nav-item:hover{background:var(--ink-soft);color:#fff;}
+  .nav-item.active{background:var(--primary);color:#fff;}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex-shrink:0;}
+  .sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid #22385A;}
+  .btn-logout{
+    width:100%;background:transparent;border:1px solid #2C466B;color:#B7C2D0;
+    padding:8px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .btn-logout:hover{background:var(--ink-soft);color:#fff;}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{
+    height:60px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;padding:0 28px;
+  }
+  .topbar h1{font-size:17px;margin:0;font-weight:700;}
+  .topbar .who{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:13px;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:var(--primary-soft);color:var(--primary);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;}
+
+  .content{padding:28px;overflow-y:auto;}
+  .section{display:none;}
+  .section.active{display:block;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;
+    border-top:3px solid var(--kpi-color,var(--primary));}
+  .kpi .label{color:var(--text-muted);font-size:12.5px;margin-bottom:8px;}
+  .kpi .value{font-size:26px;font-weight:800;letter-spacing:-0.01em;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:24px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+  .panel-head h2{font-size:14.5px;margin:0;font-weight:700;}
+  .panel-head .sub{color:var(--text-muted);font-size:12.5px;margin-top:2px;}
+
+  table.data{width:100%;border-collapse:collapse;}
+  table.data th{
+    text-align:left;font-size:12px;color:var(--text-muted);font-weight:600;
+    padding:10px 20px;background:#FAFBFC;border-bottom:1px solid var(--border);
+  }
+  table.data td{padding:12px 20px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle;}
+  table.data tbody tr:last-child td{border-bottom:none;}
+  table.data tbody tr:hover{background:#FAFBFC;}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;}
+  .pill.ok{background:var(--primary-soft);color:var(--primary);}
+  .pill.warn{background:var(--warn-soft);color:var(--warn);}
+  .pill.danger{background:var(--danger-soft);color:var(--danger);}
+  .pill.muted{background:#EEF1F4;color:var(--text-muted);}
+
+  .amount.thu{color:var(--success);font-weight:600;}
+  .amount.chi{color:var(--danger);font-weight:600;}
+  .amount.chuyenkhoan{color:var(--text-muted);font-weight:600;}
+
+  .btn{
+    border:1px solid var(--border);background:var(--surface);color:var(--text);
+    padding:6px 12px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .btn:hover{border-color:#C7CEDA;}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn.danger{background:var(--surface);border-color:var(--danger);color:var(--danger);}
+  .btn.small{padding:4px 10px;font-size:12px;}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+
+  .toolbar{display:flex;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .toolbar input[type=text], .toolbar select{
+    border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;
+  }
+  .toolbar input[type=text]{min-width:220px;}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--text-muted);font-size:13px;}
+  .loading{padding:40px 20px;text-align:center;color:var(--text-muted);font-size:13px;}
+  .error-msg{
+    padding:16px 20px;background:var(--danger-soft);color:var(--danger);font-size:13px;
+    border-radius:8px;margin-bottom:20px;display:none;
+  }
+  .error-msg.show{display:block;}
+
+  .member-chip{display:inline-flex;align-items:center;gap:6px;background:#F5F7F9;border:1px solid var(--border);
+    border-radius:100px;padding:4px 10px 4px 4px;font-size:12.5px;margin:2px 4px 2px 0;}
+  .member-chip .role{background:var(--primary);color:#fff;border-radius:100px;padding:1px 8px;font-size:11px;font-weight:700;}
+  .member-chip .role.qt{background:#5B6B84;}
+  .member-chip .role.tv{background:#9AA6B8;}
+
+  .overlay{position:fixed;inset:0;background:rgba(16,35,61,.45);display:none;align-items:center;justify-content:center;z-index:50;}
+  .overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;width:420px;max-width:90vw;padding:22px;}
+  .modal h3{margin:0 0 4px;font-size:16px;}
+  .modal p{color:var(--text-muted);font-size:13px;margin:0 0 18px;}
+  .modal .row{display:flex;gap:10px;justify-content:flex-end;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text-muted);margin-bottom:6px;}
+  .field input, .field select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;}
+
+  code.mono{font-size:12px;color:var(--text-muted);}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">Sổ Chi Tiêu <span>· Admin</span></div>
+
+    <div class="nav-item active" data-section="tong-quan"><span class="nav-dot"></span>Tổng quan</div>
+    <div class="nav-item" data-section="nguoi-dung"><span class="nav-dot"></span>Người dùng</div>
+    <div class="nav-item" data-section="so-chi-tieu"><span class="nav-dot"></span>Sổ chi tiêu</div>
+    <div class="nav-item" data-section="danh-muc-mau"><span class="nav-dot"></span>Danh mục mẫu</div>
+    <div class="nav-item" data-section="giao-dich"><span class="nav-dot"></span>Giao dịch</div>
+    <div class="nav-item" data-section="nhat-ky"><span class="nav-dot"></span>Nhật ký hệ thống</div>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="btn-logout">Đăng xuất</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Tổng quan</h1>
+      <div class="who">
+        <div class="avatar" id="user-avatar">--</div>
+        <span id="user-name">...</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="error-msg" id="global-error"></div>
+
+      <!-- ===================== TỔNG QUAN ===================== -->
+      <section class="section active" id="sec-tong-quan">
+        <div class="kpi-row">
+          <div class="kpi" style="--kpi-color:var(--primary)">
+            <div class="label">Người dùng hoạt động</div>
+            <div class="value" id="kpi-users">—</div>
+          </div>
+          <div class="kpi" style="--kpi-color:#5B6B84">
+            <div class="label">Sổ gia đình</div>
+            <div class="value" id="kpi-families">—</div>
+          </div>
+          <div class="kpi" style="--kpi-color:var(--warn)">
+            <div class="label">Giao dịch tháng này</div>
+            <div class="value" id="kpi-tx">—</div>
+          </div>
+          <div class="kpi" style="--kpi-color:var(--danger)">
+            <div class="label">Tài khoản đang khóa</div>
+            <div class="value" id="kpi-locked">—</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Sổ chi tiêu tạo gần đây</h2>
+              <div class="sub">5 sổ mới nhất trong hệ thống</div>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th>Tên sổ</th><th>Loại</th><th>Thành viên</th><th>Ngày tạo</th></tr></thead>
+            <tbody id="tbl-recent-spaces"><tr><td colspan="4"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== NGƯỜI DÙNG ===================== -->
+      <section class="section" id="sec-nguoi-dung">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-user-search" placeholder="Tìm theo tên hoặc email...">
+            <select id="filter-user-status">
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="locked">Đã khóa</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Người dùng</th><th>SĐT</th><th>Vai trò</th><th>Số sổ tham gia</th><th>Ngày tạo</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody id="tbl-users"><tr><td colspan="7"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== SỔ CHI TIÊU ===================== -->
+      <section class="section" id="sec-so-chi-tieu">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-space-search" placeholder="Tìm theo tên sổ...">
+            <select id="filter-space-type">
+              <option value="">Tất cả loại sổ</option>
+              <option value="CaNhan">Cá nhân</option>
+              <option value="GiaDinh">Gia đình</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Tên sổ</th><th>Loại</th><th>Đơn vị tiền</th><th>Người tạo</th><th>Thành viên</th><th>Ngày tạo</th></tr>
+            </thead>
+            <tbody id="tbl-spaces"><tr><td colspan="6"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== DANH MỤC MẪU ===================== -->
+      <section class="section" id="sec-danh-muc-mau">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Danh mục mẫu toàn hệ thống</h2>
+              <div class="sub">Được sao chép vào mỗi sổ mới khi người dùng đăng ký</div>
+            </div>
+            <button class="btn primary" id="btn-add-template">+ Thêm danh mục mẫu</button>
+          </div>
+          <table class="data">
+            <thead><tr><th>Biểu tượng</th><th>Tên danh mục</th><th>Loại</th><th>Thứ tự</th><th></th></tr></thead>
+            <tbody id="tbl-templates"><tr><td colspan="5"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== GIAO DỊCH ===================== -->
+      <section class="section" id="sec-giao-dich">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-tx-search" placeholder="Tìm theo ghi chú, tên sổ...">
+            <select id="filter-tx-type">
+              <option value="">Tất cả loại</option>
+              <option value="Thu">Thu</option>
+              <option value="Chi">Chi</option>
+              <option value="ChuyenKhoan">Chuyển khoản</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Sổ chi tiêu</th><th>Người tạo</th><th>Loại</th><th>Số tiền</th><th>Ghi chú</th><th>Ngày giao dịch</th></tr>
+            </thead>
+            <tbody id="tbl-transactions"><tr><td colspan="6"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== NHẬT KÝ HỆ THỐNG ===================== -->
+      <section class="section" id="sec-nhat-ky">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Nhật ký hệ thống</h2>
+              <div class="sub">Lịch sử thao tác quản trị</div>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th>Thời gian</th><th>Hành động</th><th>Đối tượng</th><th>Người thực hiện</th><th>Địa chỉ IP</th></tr></thead>
+            <tbody id="tbl-logs"><tr><td colspan="5"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: khóa/mở khóa user -->
+<div class="overlay" id="overlay-lock">
+  <div class="modal">
+    <h3 id="lock-modal-title">Khóa tài khoản</h3>
+    <p id="lock-modal-desc"></p>
+    <div class="row">
+      <button class="btn" id="lock-modal-cancel">Hủy</button>
+      <button class="btn danger" id="lock-modal-confirm">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: thêm danh mục mẫu -->
+<div class="overlay" id="overlay-template">
+  <div class="modal">
+    <h3>Thêm danh mục mẫu</h3>
+    <p>Danh mục này sẽ được sao chép vào mọi sổ chi tiêu tạo mới sau này.</p>
+    <div class="field">
+      <label>Biểu tượng (emoji)</label>
+      <input type="text" id="tpl-icon" placeholder="🍜" maxlength="4">
+    </div>
+    <div class="field">
+      <label>Tên danh mục</label>
+      <input type="text" id="tpl-name" placeholder="Ví dụ: Du lịch">
+    </div>
+    <div class="field">
+      <label>Loại</label>
+      <select id="tpl-type">
+        <option value="Chi">Chi</option>
+        <option value="Thu">Thu</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="btn" id="tpl-modal-cancel">Hủy</button>
+      <button class="btn primary" id="tpl-modal-confirm">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+/* =====================================================================
+   BẢO VỆ TRANG - chưa đăng nhập thì chuyển về login.html
+===================================================================== */
+if (yeuCauDangNhap()) {
+  const nguoiDungHienTai = layNguoiDung();
+  if (nguoiDungHienTai) {
+    document.getElementById('user-name').textContent = nguoiDungHienTai.hoTen;
+    document.getElementById('user-avatar').textContent =
+      nguoiDungHienTai.hoTen.split(' ').slice(-2).map(w => w[0]).join('').toUpperCase();
+  }
+}
+
+document.getElementById('btn-logout').addEventListener('click', dangXuat);
+
+/* =====================================================================
+   TIỆN ÍCH
+===================================================================== */
+function formatVND(n){ return Number(n).toLocaleString('vi-VN') + ' \u20AB'; }
+function formatDate(d){ return d ? new Date(d).toLocaleDateString('vi-VN') : '—'; }
+function formatDateTime(d){
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+}
+function escapeHtml(s){
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function hienLoiChung(msg){
+  const box = document.getElementById('global-error');
+  box.textContent = msg;
+  box.classList.add('show');
+  setTimeout(() => box.classList.remove('show'), 6000);
+}
+function rowThongBao(colspan, text, cls){
+  return '<tr><td colspan="' + colspan + '"><div class="' + (cls || 'empty') + '">' + escapeHtml(text) + '</div></td></tr>';
+}
+function loaiSoPill(loai){
+  return loai === 'GiaDinh'
+    ? '<span class="pill ok">Gia đình</span>'
+    : '<span class="pill muted">Cá nhân</span>';
+}
+function vaiTroLabel(v){ return v === 'ChuSo' ? 'Chủ sổ' : v === 'QuanTri' ? 'Quản trị' : 'Thành viên'; }
+function txTypePill(loai){
+  if (loai === 'Thu') return '<span class="pill ok">Thu</span>';
+  if (loai === 'Chi') return '<span class="pill danger">Chi</span>';
+  return '<span class="pill muted">Chuyển khoản</span>';
+}
+// Hoãn gọi API khi người dùng đang gõ, tránh bắn request mỗi lần nhấn phím
+function debounce(fn, ms){
+  let timer;
+  ms = ms || 350;
+  return function(){
+    const args = arguments;
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(null, args), ms);
+  };
+}
+
+/* =====================================================================
+   ĐIỀU HƯỚNG - tải dữ liệu lần đầu khi mở mỗi tab
+===================================================================== */
+const titles = {
+  'tong-quan':'Tổng quan', 'nguoi-dung':'Người dùng', 'so-chi-tieu':'Sổ chi tiêu',
+  'danh-muc-mau':'Danh mục mẫu', 'giao-dich':'Giao dịch', 'nhat-ky':'Nhật ký hệ thống'
+};
+const daTai = {};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    const key = item.dataset.section;
+    document.getElementById('sec-' + key).classList.add('active');
+    document.getElementById('page-title').textContent = titles[key];
+
+    const boTai = {
+      'tong-quan': taiTongQuan,
+      'nguoi-dung': taiNguoiDung,
+      'so-chi-tieu': taiSoChiTieu,
+      'danh-muc-mau': taiDanhMucMau,
+      'giao-dich': taiGiaoDich,
+      'nhat-ky': taiNhatKy,
+    };
+
+    if (!daTai[key]) {
+      daTai[key] = true;
+      boTai[key]();
+    }
+  });
+});
+
+/* =====================================================================
+   TỔNG QUAN
+===================================================================== */
+async function taiTongQuan(){
+  try {
+    const data = await api.tongQuan();
+
+    document.getElementById('kpi-users').textContent = data.tongNguoiDungHoatDong || 0;
+    document.getElementById('kpi-families').textContent = data.tongSoGiaDinh || 0;
+    document.getElementById('kpi-tx').textContent = data.tongGiaoDichThangNay || 0;
+    document.getElementById('kpi-locked').textContent = data.tongTaiKhoanKhoa || 0;
+
+    const spaces = data.soGanDay || [];
+    document.getElementById('tbl-recent-spaces').innerHTML = spaces.length
+      ? spaces.map(s =>
+          '<tr>' +
+          '<td>' + escapeHtml(s.TenSo) + '</td>' +
+          '<td>' + loaiSoPill(s.LoaiSo) + '</td>' +
+          '<td>' + s.SoThanhVien + '</td>' +
+          '<td>' + formatDate(s.NgayTao) + '</td>' +
+          '</tr>').join('')
+      : rowThongBao(4, 'Chưa có sổ chi tiêu nào.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    document.getElementById('tbl-recent-spaces').innerHTML = rowThongBao(4, 'Không tải được dữ liệu.');
+  }
+}
+
+/* =====================================================================
+   NGƯỜI DÙNG
+===================================================================== */
+async function taiNguoiDung(){
+  const tuKhoa = document.getElementById('filter-user-search').value.trim();
+  const trangThai = document.getElementById('filter-user-status').value;
+  const tbody = document.getElementById('tbl-users');
+  tbody.innerHTML = rowThongBao(7, 'Đang tải...', 'loading');
+
+  try {
+    const rows = await api.nguoiDung(tuKhoa, trangThai);
+    tbody.innerHTML = rows.length ? rows.map(u =>
+      '<tr>' +
+      '<td><strong>' + escapeHtml(u.HoTen) + '</strong><br><code class="mono">' + escapeHtml(u.Email) + '</code></td>' +
+      '<td>' + (escapeHtml(u.SoDienThoai) || '—') + '</td>' +
+      '<td>' + (u.VaiTroHeThong === 'QuanTriVien'
+            ? '<span class="pill warn">Quản trị viên</span>'
+            : '<span class="pill muted">Người dùng</span>') + '</td>' +
+      '<td>' + u.SoSoThamGia + '</td>' +
+      '<td>' + formatDate(u.NgayTao) + '</td>' +
+      '<td>' + (u.DangHoatDong
+            ? '<span class="pill ok">Hoạt động</span>'
+            : '<span class="pill danger">Đã khóa</span>') + '</td>' +
+      '<td>' + (u.VaiTroHeThong === 'QuanTriVien' ? '' :
+            '<button class="btn small ' + (u.DangHoatDong ? 'danger' : '') + '"' +
+            ' data-id="' + u.MaNguoiDung + '"' +
+            ' data-ten="' + escapeHtml(u.HoTen) + '"' +
+            ' data-hoatdong="' + (u.DangHoatDong ? '1' : '0') + '"' +
+            ' onclick="moModalKhoa(this)">' + (u.DangHoatDong ? 'Khóa' : 'Mở khóa') + '</button>') + '</td>' +
+      '</tr>').join('') : rowThongBao(7, 'Không tìm thấy người dùng phù hợp.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    tbody.innerHTML = rowThongBao(7, 'Không tải được dữ liệu.');
+  }
+}
+document.getElementById('filter-user-search').addEventListener('input', debounce(taiNguoiDung));
+document.getElementById('filter-user-status').addEventListener('change', taiNguoiDung);
+
+let userDangXuLy = null;
+function moModalKhoa(btn){
+  userDangXuLy = {
+    id: btn.dataset.id,
+    ten: btn.dataset.ten,
+    dangHoatDong: btn.dataset.hoatdong === '1',
+  };
+  document.getElementById('lock-modal-title').textContent =
+    userDangXuLy.dangHoatDong ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
+  document.getElementById('lock-modal-desc').textContent = userDangXuLy.dangHoatDong
+    ? userDangXuLy.ten + ' sẽ không thể đăng nhập cho đến khi được mở khóa lại.'
+    : userDangXuLy.ten + ' sẽ có thể đăng nhập lại bình thường.';
+  document.getElementById('overlay-lock').classList.add('show');
+}
+
+document.getElementById('lock-modal-cancel').addEventListener('click', () => {
+  document.getElementById('overlay-lock').classList.remove('show');
+});
+
+document.getElementById('lock-modal-confirm').addEventListener('click', async () => {
+  if (!userDangXuLy) return;
+  const btn = document.getElementById('lock-modal-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Đang xử lý...';
+
+  try {
+    await api.doiTrangThaiNguoiDung(userDangXuLy.id, !userDangXuLy.dangHoatDong);
+    document.getElementById('overlay-lock').classList.remove('show');
+    await taiNguoiDung();
+    daTai['tong-quan'] = false;   // buộc tải lại KPI khi quay lại tab tổng quan
+    daTai['nhat-ky'] = false;     // nhật ký vừa có dòng mới
+  } catch (err) {
+    hienLoiChung(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Xác nhận';
+  }
+});
+
+/* =====================================================================
+   SỔ CHI TIÊU
+===================================================================== */
+async function taiSoChiTieu(){
+  const tuKhoa = document.getElementById('filter-space-search').value.trim();
+  const loai = document.getElementById('filter-space-type').value;
+  const tbody = document.getElementById('tbl-spaces');
+  tbody.innerHTML = rowThongBao(6, 'Đang tải...', 'loading');
+
+  try {
+    const rows = await api.soChiTieu(tuKhoa, loai);
+    tbody.innerHTML = rows.length ? rows.map(s =>
+      '<tr>' +
+      '<td><strong>' + escapeHtml(s.TenSo) + '</strong></td>' +
+      '<td>' + loaiSoPill(s.LoaiSo) + '</td>' +
+      '<td>' + escapeHtml(s.DonViTienTe) + '</td>' +
+      '<td>' + escapeHtml(s.NguoiTao) + '</td>' +
+      '<td>' + (s.ThanhVien || []).map(m =>
+          '<span class="member-chip">' + escapeHtml(m.Ten) +
+          '<span class="role ' + (m.VaiTro === 'ChuSo' ? '' : m.VaiTro === 'QuanTri' ? 'qt' : 'tv') + '">' +
+          vaiTroLabel(m.VaiTro) + '</span></span>').join('') + '</td>' +
+      '<td>' + formatDate(s.NgayTao) + '</td>' +
+      '</tr>').join('') : rowThongBao(6, 'Không tìm thấy sổ chi tiêu phù hợp.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    tbody.innerHTML = rowThongBao(6, 'Không tải được dữ liệu.');
+  }
+}
+document.getElementById('filter-space-search').addEventListener('input', debounce(taiSoChiTieu));
+document.getElementById('filter-space-type').addEventListener('change', taiSoChiTieu);
+
+/* =====================================================================
+   DANH MỤC MẪU
+===================================================================== */
+async function taiDanhMucMau(){
+  const tbody = document.getElementById('tbl-templates');
+  tbody.innerHTML = rowThongBao(5, 'Đang tải...', 'loading');
+
+  try {
+    const rows = await api.danhMucMau();
+    tbody.innerHTML = rows.length ? rows.map(t =>
+      '<tr>' +
+      '<td style="font-size:18px;">' + escapeHtml(t.BieuTuong) + '</td>' +
+      '<td>' + escapeHtml(t.TenDanhMuc) + '</td>' +
+      '<td>' + (t.Loai === 'Chi' ? '<span class="pill danger">Chi</span>' : '<span class="pill ok">Thu</span>') + '</td>' +
+      '<td>' + t.ThuTuSapXep + '</td>' +
+      '<td><button class="btn small danger" onclick="xoaTemplate(' + t.MaDanhMucMau + ')">Xóa</button></td>' +
+      '</tr>').join('') : rowThongBao(5, 'Chưa có danh mục mẫu nào.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    tbody.innerHTML = rowThongBao(5, 'Không tải được dữ liệu.');
+  }
+}
+
+async function xoaTemplate(id){
+  if (!confirm('Xóa danh mục mẫu này? Các sổ đã tạo trước đó không bị ảnh hưởng.')) return;
+  try {
+    await api.xoaDanhMucMau(id);
+    await taiDanhMucMau();
+    daTai['nhat-ky'] = false;
+  } catch (err) {
+    hienLoiChung(err.message);
+  }
+}
+
+document.getElementById('btn-add-template').addEventListener('click', () => {
+  document.getElementById('tpl-icon').value = '';
+  document.getElementById('tpl-name').value = '';
+  document.getElementById('tpl-type').value = 'Chi';
+  document.getElementById('overlay-template').classList.add('show');
+});
+document.getElementById('tpl-modal-cancel').addEventListener('click', () => {
+  document.getElementById('overlay-template').classList.remove('show');
+});
+document.getElementById('tpl-modal-confirm').addEventListener('click', async () => {
+  const icon = document.getElementById('tpl-icon').value.trim() || '📌';
+  const name = document.getElementById('tpl-name').value.trim();
+  const type = document.getElementById('tpl-type').value;
+
+  if (!name) { alert('Vui lòng nhập tên danh mục.'); return; }
+
+  const btn = document.getElementById('tpl-modal-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
+
+  try {
+    await api.themDanhMucMau(name, icon, type);
+    document.getElementById('overlay-template').classList.remove('show');
+    await taiDanhMucMau();
+    daTai['nhat-ky'] = false;
+  } catch (err) {
+    hienLoiChung(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lưu';
+  }
+});
+
+/* =====================================================================
+   GIAO DỊCH
+===================================================================== */
+async function taiGiaoDich(){
+  const tuKhoa = document.getElementById('filter-tx-search').value.trim();
+  const loai = document.getElementById('filter-tx-type').value;
+  const tbody = document.getElementById('tbl-transactions');
+  tbody.innerHTML = rowThongBao(6, 'Đang tải...', 'loading');
+
+  try {
+    const rows = await api.giaoDich(tuKhoa, loai);
+    tbody.innerHTML = rows.length ? rows.map(t =>
+      '<tr>' +
+      '<td>' + escapeHtml(t.TenSo) + '</td>' +
+      '<td>' + escapeHtml(t.NguoiTao) + '</td>' +
+      '<td>' + txTypePill(t.Loai) + '</td>' +
+      '<td class="amount ' + (t.Loai === 'Thu' ? 'thu' : t.Loai === 'Chi' ? 'chi' : 'chuyenkhoan') + '">' +
+        (t.Loai === 'Chi' ? '-' : t.Loai === 'Thu' ? '+' : '') + formatVND(t.SoTien) + '</td>' +
+      '<td>' + (escapeHtml(t.GhiChu) || '—') + '</td>' +
+      '<td>' + formatDate(t.NgayGiaoDich) + '</td>' +
+      '</tr>').join('') : rowThongBao(6, 'Không tìm thấy giao dịch phù hợp.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    tbody.innerHTML = rowThongBao(6, 'Không tải được dữ liệu.');
+  }
+}
+document.getElementById('filter-tx-search').addEventListener('input', debounce(taiGiaoDich));
+document.getElementById('filter-tx-type').addEventListener('change', taiGiaoDich);
+
+/* =====================================================================
+   NHẬT KÝ HỆ THỐNG
+===================================================================== */
+async function taiNhatKy(){
+  const tbody = document.getElementById('tbl-logs');
+  tbody.innerHTML = rowThongBao(5, 'Đang tải...', 'loading');
+
+  try {
+    const rows = await api.nhatKy();
+    tbody.innerHTML = rows.length ? rows.map(l =>
+      '<tr>' +
+      '<td>' + formatDateTime(l.NgayTao) + '</td>' +
+      '<td><code class="mono">' + escapeHtml(l.HanhDong) + '</code></td>' +
+      '<td>' + escapeHtml(l.DoiTuong) + (l.MaDoiTuong ? ' #' + l.MaDoiTuong : '') + '</td>' +
+      '<td>' + (escapeHtml(l.NguoiThucHien) || 'Hệ thống') + '</td>' +
+      '<td><code class="mono">' + (escapeHtml(l.DiaChiIP) || '—') + '</code></td>' +
+      '</tr>').join('') : rowThongBao(5, 'Chưa có nhật ký nào.');
+  } catch (err) {
+    hienLoiChung(err.message);
+    tbody.innerHTML = rowThongBao(5, 'Không tải được dữ liệu.');
+  }
+}
+
+/* =====================================================================
+   KHỞI ĐỘNG - chỉ tải tab đang mở, các tab khác tải khi được bấm vào
+===================================================================== */
+daTai['tong-quan'] = true;
+taiTongQuan();
+</script>
+</body>
+</html>

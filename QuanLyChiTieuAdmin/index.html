@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Quản trị · Sổ Chi Tiêu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">Sổ Chi Tiêu <span>· Admin</span></div>
+
+    <div class="nav-item active" data-section="tong-quan"><span class="nav-dot"></span>Tổng quan</div>
+    <div class="nav-item" data-section="nguoi-dung"><span class="nav-dot"></span>Người dùng</div>
+    <div class="nav-item" data-section="so-chi-tieu"><span class="nav-dot"></span>Sổ chi tiêu</div>
+    <div class="nav-item" data-section="danh-muc-mau"><span class="nav-dot"></span>Danh mục mẫu</div>
+    <div class="nav-item" data-section="giao-dich"><span class="nav-dot"></span>Giao dịch</div>
+    <div class="nav-item" data-section="nhat-ky"><span class="nav-dot"></span>Nhật ký hệ thống</div>
+
+    <div class="sidebar-footer">Kết nối API thật — QuanLyChiTieuAPI</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Tổng quan</h1>
+      <div class="who">
+        <div class="avatar" id="avatar-initials">AD</div>
+        <span id="ten-nguoi-dung">Quản trị viên</span>
+        <button class="link-btn" id="btn-dang-xuat">Đăng xuất</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===================== TỔNG QUAN ===================== -->
+      <section class="section active" id="sec-tong-quan">
+        <div class="kpi-row">
+          <div class="kpi" style="--kpi-color:var(--primary)">
+            <div class="label">Người dùng hoạt động</div>
+            <div class="value" id="kpi-users">—</div>
+            <div class="delta" id="kpi-users-delta"></div>
+          </div>
+          <div class="kpi" style="--kpi-color:#5B6B84">
+            <div class="label">Sổ gia đình</div>
+            <div class="value" id="kpi-families">—</div>
+          </div>
+          <div class="kpi" style="--kpi-color:var(--warn)">
+            <div class="label">Giao dịch tháng này</div>
+            <div class="value" id="kpi-tx">—</div>
+          </div>
+          <div class="kpi" style="--kpi-color:var(--danger)">
+            <div class="label">Tài khoản đang khóa</div>
+            <div class="value" id="kpi-locked">—</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Người dùng mới theo tuần</h2>
+              <div class="sub">4 tuần gần nhất</div>
+            </div>
+          </div>
+          <div style="padding:20px;" id="chart-new-users"><div class="loading">Đang tải...</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Sổ chi tiêu hoạt động nhiều nhất</h2>
+              <div class="sub">Xếp theo số giao dịch trong 30 ngày</div>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th>Tên sổ</th><th>Loại</th><th>Thành viên</th><th>Giao dịch (30 ngày)</th></tr></thead>
+            <tbody id="tbl-top-spaces"><tr><td colspan="4"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== NGƯỜI DÙNG ===================== -->
+      <section class="section" id="sec-nguoi-dung">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-user-search" placeholder="Tìm theo tên hoặc email...">
+            <select id="filter-user-status">
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="locked">Đã khóa</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Người dùng</th><th>SĐT</th><th>Vai trò</th><th>Số sổ tham gia</th><th>Ngày tạo</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody id="tbl-users"><tr><td colspan="7"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+          <div class="pagination">
+            <span class="page-info" id="user-page-info">Trang 1</span>
+            <button class="btn small" id="user-prev">‹ Trước</button>
+            <button class="btn small" id="user-next">Sau ›</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SỔ CHI TIÊU ===================== -->
+      <section class="section" id="sec-so-chi-tieu">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-space-search" placeholder="Tìm theo tên sổ...">
+            <select id="filter-space-type">
+              <option value="">Tất cả loại sổ</option>
+              <option value="CaNhan">Cá nhân</option>
+              <option value="GiaDinh">Gia đình</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Tên sổ</th><th>Loại</th><th>Đơn vị tiền</th><th>Người tạo</th><th>Thành viên</th><th>Ngày tạo</th></tr>
+            </thead>
+            <tbody id="tbl-spaces"><tr><td colspan="6"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== DANH MỤC MẪU ===================== -->
+      <section class="section" id="sec-danh-muc-mau">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Danh mục mẫu toàn hệ thống</h2>
+              <div class="sub">Được sao chép vào mỗi sổ mới khi tạo tài khoản</div>
+            </div>
+            <button class="btn primary" id="btn-add-template">+ Thêm danh mục mẫu</button>
+          </div>
+          <table class="data">
+            <thead><tr><th>Biểu tượng</th><th>Tên danh mục</th><th>Loại</th><th>Thứ tự</th><th></th></tr></thead>
+            <tbody id="tbl-templates"><tr><td colspan="5"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== GIAO DỊCH ===================== -->
+      <section class="section" id="sec-giao-dich">
+        <div class="panel">
+          <div class="toolbar">
+            <input type="text" id="filter-tx-search" placeholder="Tìm theo ghi chú, tên sổ...">
+            <select id="filter-tx-type">
+              <option value="">Tất cả loại</option>
+              <option value="Thu">Thu</option>
+              <option value="Chi">Chi</option>
+              <option value="ChuyenKhoan">Chuyển khoản</option>
+            </select>
+          </div>
+          <table class="data">
+            <thead>
+              <tr><th>Sổ chi tiêu</th><th>Người tạo</th><th>Loại</th><th>Số tiền</th><th>Ghi chú</th><th>Ngày giao dịch</th></tr>
+            </thead>
+            <tbody id="tbl-transactions"><tr><td colspan="6"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+          <div class="pagination">
+            <span class="page-info" id="tx-page-info">Trang 1</span>
+            <button class="btn small" id="tx-prev">‹ Trước</button>
+            <button class="btn small" id="tx-next">Sau ›</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== NHẬT KÝ HỆ THỐNG ===================== -->
+      <section class="section" id="sec-nhat-ky">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Nhật ký hệ thống</h2>
+              <div class="sub">Lịch sử thao tác quản trị và hệ thống</div>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th>Thời gian</th><th>Hành động</th><th>Đối tượng</th><th>Người thực hiện</th><th>Địa chỉ IP</th></tr></thead>
+            <tbody id="tbl-logs"><tr><td colspan="5"><div class="loading">Đang tải...</div></td></tr></tbody>
+          </table>
+          <div class="pagination">
+            <span class="page-info" id="log-page-info">Trang 1</span>
+            <button class="btn small" id="log-prev">‹ Trước</button>
+            <button class="btn small" id="log-next">Sau ›</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: khóa/mở khóa user -->
+<div class="overlay" id="overlay-lock">
+  <div class="modal">
+    <h3 id="lock-modal-title">Khóa tài khoản</h3>
+    <p id="lock-modal-desc">Người dùng sẽ không thể đăng nhập cho đến khi được mở khóa lại.</p>
+    <div class="row">
+      <button class="btn" id="lock-modal-cancel">Hủy</button>
+      <button class="btn danger" id="lock-modal-confirm">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: thêm danh mục mẫu -->
+<div class="overlay" id="overlay-template">
+  <div class="modal">
+    <h3>Thêm danh mục mẫu</h3>
+    <p>Danh mục này sẽ được sao chép vào mọi sổ chi tiêu mới tạo sau này.</p>
+    <div class="field">
+      <label>Biểu tượng (emoji)</label>
+      <input type="text" id="tpl-icon" placeholder="🍜" maxlength="4">
+    </div>
+    <div class="field">
+      <label>Tên danh mục</label>
+      <input type="text" id="tpl-name" placeholder="Ví dụ: Du lịch">
+    </div>
+    <div class="field">
+      <label>Loại</label>
+      <select id="tpl-type">
+        <option value="Chi">Chi</option>
+        <option value="Thu">Thu</option>
+      </select>
+    </div>
+    <div class="row">
+      <button class="btn" id="tpl-modal-cancel">Hủy</button>
+      <button class="btn primary" id="tpl-modal-confirm">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="api.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Đăng nhập · Quản trị Sổ Chi Tiêu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="login-shell">
+  <div class="login-card">
+    <div class="brand">Sổ Chi Tiêu <span>· Quản trị</span></div>
+    <p class="sub">Đăng nhập bằng tài khoản có quyền quản trị viên</p>
+
+    <div id="login-err" style="display:none;background:var(--danger-soft);color:var(--danger);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px;"></div>
+
+    <form id="form-login">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="admin@gmail.com" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-matkhau">Mật khẩu</label>
+        <input type="password" id="login-matkhau" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn primary" id="login-submit">Đăng nhập</button>
+    </form>
+
+    <p style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-muted);line-height:1.6;">
+      Chưa có tài khoản quản trị? Chạy lệnh sau trong thư mục <code>QuanLyChiTieuAPI</code>:<br>
+      <code>node scripts/taoQuanTriVien.js admin@gmail.com MatKhau123 "Tên Admin"</code>
+    </p>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>

@@ -18,7 +18,7 @@ export default function RegisterScreen() {
     dangKy.mutate(
       { hoTen, email, matKhau },
       {
-        onSuccess: () => router.replace('/(tabs)'),
+        onSuccess: () => router.replace('/'),
         onError: () => Alert.alert('Lỗi', 'Đăng ký thất bại, email có thể đã tồn tại'),
       }
     );
