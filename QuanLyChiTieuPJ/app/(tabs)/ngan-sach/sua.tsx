@@ -25,6 +25,7 @@ export default function SuaNganSachScreen() {
   const [nguongCanhBao, setNguongCanhBao] = useState(80);
   const [tenDanhMuc, setTenDanhMuc] = useState('');
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (nganSachHienTai && maNganSach) {
       const ns = nganSachHienTai.find(n => n.maNganSach === maNganSach);
@@ -35,6 +36,7 @@ export default function SuaNganSachScreen() {
       }
     }
   }, [nganSachHienTai, maNganSach]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const xuLyLuu = () => {
     const soTienSo = Number(soTien.replace(/\D/g, ''));

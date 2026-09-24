@@ -27,6 +27,7 @@ export default function SuaViScreen() {
     const [loaiVi, setLoaiVi] = useState<LoaiVi>('TienMat');
     const [soDuBanDau, setSoDuBanDau] = useState('');
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (danhSachVi && maVi) {
             const vi = danhSachVi.find((v) => v.maVi === maVi);
@@ -37,6 +38,7 @@ export default function SuaViScreen() {
             }
         }
     }, [danhSachVi, maVi]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const xuLyLuu = () => {
         if (!tenVi.trim()) {
@@ -150,4 +152,4 @@ const styles = StyleSheet.create({
     loaiViLabel: { fontSize: 13, fontWeight: '500' },
     nutLuu: { borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 32 },
     nutLuuChu: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
+});

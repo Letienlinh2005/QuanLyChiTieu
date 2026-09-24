@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAppStore } from '../../../src/store/appStore';
 import { useVi } from '../../../src/hooks/useVi';
 import { useDanhMuc } from '../../../src/hooks/useDanhMuc';
@@ -37,6 +38,12 @@ export default function ThemGiaoDichScreen() {
   const [soTien, setSoTien] = useState('');
   const [ghiChu, setGhiChu] = useState('');
   const [ngayGiaoDich, setNgayGiaoDich] = useState(() => new Date());
+  const [dangChonNgay, setDangChonNgay] = useState(false);
+
+  const xuLyChonNgay = (event: DateTimePickerEvent, ngay?: Date) => {
+    if (ngay) setNgayGiaoDich(ngay);
+    if (event.type === 'dismissed' || Platform.OS !== 'ios') setDangChonNgay(false);
+  };
 
   const loaiDanhMuc = loai === 'Thu' ? 'Thu' : loai === 'Chi' ? 'Chi' : undefined;
   const { data: danhSachDanhMuc } = useDanhMuc(maSoChiTieu, loaiDanhMuc);
@@ -53,6 +60,14 @@ export default function ThemGiaoDichScreen() {
   };
 
   const xuLyLuu = () => {
+    const homNay = new Date();
+    homNay.setHours(0, 0, 0, 0);
+    const ngayDaChon = new Date(ngayGiaoDich);
+    ngayDaChon.setHours(0, 0, 0, 0);
+    if (ngayDaChon > homNay) {
+      Alert.alert('Ngày không hợp lệ', 'Không thể chọn ngày trong tương lai');
+      return;
+    }
     if (!maSoChiTieu) {
       Alert.alert('Lỗi', 'Chưa xác định được sổ chi tiêu');
       return;
@@ -261,64 +276,24 @@ export default function ThemGiaoDichScreen() {
         />
 
         <Text style={[styles.label, { color: colors.textSecondary }]}>Ngày giao dịch</Text>
-        <View style={styles.chonRow}>
-          <TouchableOpacity
-            style={[styles.chip, chipSelectedStyle]}
-            onPress={() => setNgayGiaoDich(new Date())}
-          >
-            <Text style={[styles.chipLabel, chipSelectedTextStyle]}>Hôm nay</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => {
-              const homQua = new Date();
-              homQua.setDate(homQua.getDate() - 1);
-              setNgayGiaoDich(homQua);
-            }}
-          >
-            <Text style={[styles.chipLabel, { color: colors.text }]}>Hôm qua</Text>
-          </TouchableOpacity>
-          <View style={styles.ngayInputRow}>
-            <TextInput
-              style={[styles.ngayInputO, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-              value={String(ngayGiaoDich.getDate())}
-              keyboardType="numeric"
-              maxLength={2}
-              onChangeText={(t) => {
-                const ngay = Number(t) || 1;
-                const d = new Date(ngayGiaoDich);
-                d.setDate(ngay);
-                setNgayGiaoDich(d);
-              }}
-            />
-            <Text style={[styles.ngayGachChu, { color: colors.textMuted }]}>/</Text>
-            <TextInput
-              style={[styles.ngayInputO, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-              value={String(ngayGiaoDich.getMonth() + 1)}
-              keyboardType="numeric"
-              maxLength={2}
-              onChangeText={(t) => {
-                const thang = Number(t) || 1;
-                const d = new Date(ngayGiaoDich);
-                d.setMonth(thang - 1);
-                setNgayGiaoDich(d);
-              }}
-            />
-            <Text style={[styles.ngayGachChu, { color: colors.textMuted }]}>/</Text>
-            <TextInput
-              style={[styles.ngayInputONam, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-              value={String(ngayGiaoDich.getFullYear())}
-              keyboardType="numeric"
-              maxLength={4}
-              onChangeText={(t) => {
-                const nam = Number(t) || ngayGiaoDich.getFullYear();
-                const d = new Date(ngayGiaoDich);
-                d.setFullYear(nam);
-                setNgayGiaoDich(d);
-              }}
-            />
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.datePickerButton, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}
+          onPress={() => setDangChonNgay(true)}
+        >
+          <Text style={[styles.datePickerIcon, { color: colors.primary }]}>📅</Text>
+          <Text style={[styles.datePickerText, { color: colors.text }]}>
+            {String(ngayGiaoDich.getDate()).padStart(2, '0')}/{String(ngayGiaoDich.getMonth() + 1).padStart(2, '0')}/{ngayGiaoDich.getFullYear()}
+          </Text>
+        </TouchableOpacity>
+        {dangChonNgay && (
+          <DateTimePicker
+            value={ngayGiaoDich}
+            maximumDate={new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            onChange={xuLyChonNgay}
+          />
+        )}
 
         <Text style={[styles.label, { color: colors.textSecondary }]}>Ghi chú (không bắt buộc)</Text>
         <TextInput
@@ -369,16 +344,12 @@ const styles = StyleSheet.create({
   chipIcon: { fontSize: 16 },
   chipLabel: { fontSize: 13 },
   goiY: { fontStyle: 'italic', fontSize: 13 },
-  ngayInputRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4 },
-  ngayInputO: {
-    borderWidth: 1, borderRadius: 8, padding: 8, fontSize: 14,
-    width: 40, textAlign: 'center',
+  datePickerButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 8, padding: 14,
   },
-  ngayInputONam: {
-    borderWidth: 1, borderRadius: 8, padding: 8, fontSize: 14,
-    width: 56, textAlign: 'center',
-  },
-  ngayGachChu: { fontSize: 16 },
+  datePickerIcon: { fontSize: 18 },
+  datePickerText: { fontSize: 16, fontWeight: '500' },
   nutLuu: {
     borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 32, marginBottom: 40,
   },

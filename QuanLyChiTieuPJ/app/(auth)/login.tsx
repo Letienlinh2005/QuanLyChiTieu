@@ -31,7 +31,7 @@ export default function LoginScreen() {
     dangNhap.mutate(
       { email: email.trim(), matKhau },
       {
-        onSuccess: () => router.replace('/(tabs)/trang-chu'),
+        onSuccess: () => router.replace('/trang-chu'),
         onError: (err: any) => {
           const thongBao = err?.response?.data?.message ?? 'Email hoặc mật khẩu không đúng';
           Alert.alert('Đăng nhập thất bại', thongBao);

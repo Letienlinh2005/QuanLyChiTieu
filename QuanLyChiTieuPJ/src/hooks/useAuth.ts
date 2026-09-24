@@ -29,7 +29,9 @@ export function useDangNhap() {
 
   return useMutation({
     mutationFn: (payload: DangNhapPayload) => authApi.dangNhap(payload),
-    onSuccess: (data) => sauKhiDangNhap(data.token, data.nguoiDung),
+    onSuccess: (data) => {
+      void sauKhiDangNhap(data.token, data.nguoiDung);
+    },
   });
 }
 
@@ -38,6 +40,8 @@ export function useDangKy() {
 
   return useMutation({
     mutationFn: (payload: DangKyPayload) => authApi.dangKy(payload),
-    onSuccess: (data) => sauKhiDangNhap(data.token, data.nguoiDung),
+    onSuccess: (data) => {
+      void sauKhiDangNhap(data.token, data.nguoiDung);
+    },
   });
 }

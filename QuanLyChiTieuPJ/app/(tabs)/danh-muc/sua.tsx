@@ -20,6 +20,7 @@ export default function SuaDanhMucScreen() {
     const [loai, setLoai] = useState<LoaiDanhMuc>('Chi');
     const [bieuTuong, setBieuTuong] = useState('📌');
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (danhSach && maDanhMuc) {
             const dm = danhSach.find(d => d.maDanhMuc === maDanhMuc);
@@ -30,6 +31,7 @@ export default function SuaDanhMucScreen() {
             }
         }
     }, [danhSach, maDanhMuc]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const xuLyLuu = () => {
         if (!tenDanhMuc.trim()) {
