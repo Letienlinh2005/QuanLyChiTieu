@@ -105,6 +105,12 @@ exports.dangNhap = async (req, res) => {
 
         const nguoiDung = rows[0];
 
+        if (nguoiDung.VaiTroHeThong === 'QuanTriVien') {
+            return res.status(403).json({
+                message: 'Tài khoản quản trị viên chỉ đăng nhập tại trang quản trị.',
+            });
+        }
+
         if (!nguoiDung.DangHoatDong) {
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
         }
