@@ -73,6 +73,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="vay-von"
+        options={{
+          title: 'Vay vốn',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'cash' : 'cash-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="cai-dat"
         options={{
           title: 'Cài đặt',

@@ -4,11 +4,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { useAppStore } from '../../../src/store/appStore';
 import { useVi } from '../../../src/hooks/useVi';
 import { useDanhMuc } from '../../../src/hooks/useDanhMuc';
-import { useTaoGiaoDich } from '../../../src/hooks/useGiaoDich';
+import { useTaoGiaoDichWithOffline } from '../../../src/hooks/useOfflineSync';
 import { LoaiGiaoDich } from '../../../src/types/giaoDich';
 import { useAppTheme } from '../../../src/store/themeStore';
 
@@ -28,7 +28,7 @@ function ngayThanhChuoiIso(date: Date): string {
 export default function ThemGiaoDichScreen() {
   const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
   const { data: danhSachVi } = useVi(maSoChiTieu);
-  const taoGiaoDich = useTaoGiaoDich();
+  const taoGiaoDich = useTaoGiaoDichWithOffline();
   const { isDark, colors } = useAppTheme();
 
   const [loai, setLoai] = useState<LoaiGiaoDich>('Chi');
@@ -40,9 +40,13 @@ export default function ThemGiaoDichScreen() {
   const [ngayGiaoDich, setNgayGiaoDich] = useState(() => new Date());
   const [dangChonNgay, setDangChonNgay] = useState(false);
 
-  const xuLyChonNgay = (event: DateTimePickerEvent, ngay?: Date) => {
+  const xuLyDoiNgay = (_event: DateTimePickerChangeEvent, ngay?: Date) => {
     if (ngay) setNgayGiaoDich(ngay);
-    if (event.type === 'dismissed' || Platform.OS !== 'ios') setDangChonNgay(false);
+    if (Platform.OS !== 'ios') setDangChonNgay(false);
+  };
+
+  const xuLyDongPicker = () => {
+    setDangChonNgay(false);
   };
 
   const loaiDanhMuc = loai === 'Thu' ? 'Thu' : loai === 'Chi' ? 'Chi' : undefined;
@@ -103,7 +107,14 @@ export default function ThemGiaoDichScreen() {
       },
       {
         onSuccess: () => router.back(),
-        onError: () => Alert.alert('Lỗi', 'Không tạo được giao dịch, thử lại sau'),
+        onOfflineSaved: () => {
+          Alert.alert(
+            '📵 Đã lưu offline',
+            'Giao dịch sẽ tự động đồng bộ khi bạn có kết nối mạng trở lại.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        },
+        onError: () => Alert.alert('Lỗi', 'Không thể lưu giao dịch, thử lại sau'),
       }
     );
   };
@@ -291,7 +302,8 @@ export default function ThemGiaoDichScreen() {
             maximumDate={new Date()}
             mode="date"
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            onChange={xuLyChonNgay}
+            onChange={xuLyDoiNgay}
+            onDismiss={xuLyDongPicker}
           />
         )}
 
@@ -304,13 +316,24 @@ export default function ThemGiaoDichScreen() {
           onChangeText={setGhiChu}
         />
 
+        {/* Indicator mạng */}
+        {!taoGiaoDich.isOnline && (
+          <View style={styles.offlineNote}>
+            <Text style={styles.offlineNoteText}>📵 Không có mạng — giao dịch sẽ được lưu offline</Text>
+          </View>
+        )}
+
         <TouchableOpacity
-          style={[styles.nutLuu, { backgroundColor: colors.primary }]}
+          style={[styles.nutLuu, { backgroundColor: taoGiaoDich.isOnline ? colors.primary : '#64748b' }]}
           onPress={xuLyLuu}
           disabled={taoGiaoDich.isPending}
         >
           <Text style={styles.nutLuuChu}>
-            {taoGiaoDich.isPending ? 'Đang lưu...' : 'Lưu giao dịch'}
+            {taoGiaoDich.isPending
+              ? 'Đang lưu...'
+              : taoGiaoDich.isOnline
+              ? 'Lưu giao dịch'
+              : '💾 Lưu offline'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -351,7 +374,12 @@ const styles = StyleSheet.create({
   datePickerIcon: { fontSize: 18 },
   datePickerText: { fontSize: 16, fontWeight: '500' },
   nutLuu: {
-    borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 32, marginBottom: 40,
+    borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 16, marginBottom: 40,
   },
   nutLuuChu: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  offlineNote: {
+    backgroundColor: '#fef3c7', borderRadius: 8, padding: 10,
+    marginTop: 16, borderWidth: 1, borderColor: '#f59e0b',
+  },
+  offlineNoteText: { color: '#92400e', fontSize: 13, fontWeight: '500', textAlign: 'center' },
 });

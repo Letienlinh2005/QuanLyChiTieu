@@ -9,6 +9,7 @@ const danhMucRoutes = require('./routes/danhMuc.routes');
 const giaoDichRoutes = require('./routes/giaoDich.routes');
 const nganSachRoutes = require('./routes/nganSach.routes');
 const baoCaoRoutes = require('./routes/baoCao.routes');
+const vayVonRoutes = require('./routes/vayVon.routes');
 const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/danh-muc', danhMucRoutes);
 app.use('/api/giao-dich', giaoDichRoutes);
 app.use('/api/ngan-sach', nganSachRoutes);
 app.use('/api/bao-cao', baoCaoRoutes);
+app.use('/api/vay-von', vayVonRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

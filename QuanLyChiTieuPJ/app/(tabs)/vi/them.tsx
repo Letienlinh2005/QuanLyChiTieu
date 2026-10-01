@@ -15,6 +15,11 @@ const CAC_LOAI_VI: { value: LoaiVi; label: string; icon: string }[] = [
     { value: 'Khac', label: 'Khác', icon: '📦' },
 ];
 
+function formatSoTien(raw: string): string {
+    const soThuan = raw.replace(/\./g, '').replace(/[^0-9]/g, '');
+    return soThuan.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 export default function ThemViScreen() {
     const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
     const taoVi = useTaoVi();
@@ -42,7 +47,7 @@ export default function ThemViScreen() {
                 tenVi: tenVi.trim(),
                 bieuTuong: loaiDaChon.icon,
                 loaiVi,
-                soDuBanDau: Number(soDuBanDau.replace(/\D/g, '')) || 0,
+                soDuBanDau: Number(soDuBanDau.replace(/\./g, '')) || 0,
             },
             {
                 onSuccess: () => router.back(),
@@ -101,7 +106,7 @@ export default function ThemViScreen() {
                     placeholder="0"
                     placeholderTextColor={colors.textMuted}
                     value={soDuBanDau}
-                    onChangeText={setSoDuBanDau}
+                    onChangeText={(val) => setSoDuBanDau(formatSoTien(val))}
                     keyboardType="numeric"
                 />
 

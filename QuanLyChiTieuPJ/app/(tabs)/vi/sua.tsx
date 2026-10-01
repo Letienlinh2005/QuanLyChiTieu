@@ -15,6 +15,12 @@ const CAC_LOAI_VI: { value: LoaiVi; label: string; icon: string }[] = [
     { value: 'Khac', label: 'Khác', icon: '📦' },
 ];
 
+function formatSoTien(raw: string): string {
+    const soThuan = raw.replace(/\./g, '').replace(/[^0-9]/g, '');
+    return soThuan.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+
 export default function SuaViScreen() {
     const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
     const params = useLocalSearchParams();
@@ -34,7 +40,7 @@ export default function SuaViScreen() {
             if (vi) {
                 setTenVi(vi.tenVi);
                 setLoaiVi(vi.loaiVi);
-                setSoDuBanDau(String(vi.soDuBanDau));
+                setSoDuBanDau(formatSoTien(String(vi.soDuBanDau)));
             }
         }
     }, [danhSachVi, maVi]);
@@ -54,7 +60,7 @@ export default function SuaViScreen() {
                 tenVi: tenVi.trim(),
                 bieuTuong: loaiDaChon.icon,
                 loaiVi,
-                soDuBanDau: Number(soDuBanDau.replace(/\D/g, '')) || 0,
+                soDuBanDau: Number(soDuBanDau.replace(/\./g, '')) || 0,
             },
             {
                 onSuccess: () => router.back(),
@@ -113,7 +119,7 @@ export default function SuaViScreen() {
                     placeholder="0"
                     placeholderTextColor={colors.textMuted}
                     value={soDuBanDau}
-                    onChangeText={setSoDuBanDau}
+                    onChangeText={(val) => setSoDuBanDau(formatSoTien(val))}
                     keyboardType="numeric"
                 />
 

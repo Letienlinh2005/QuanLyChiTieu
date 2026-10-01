@@ -7,5 +7,6 @@ router.use(xacThuc);
 
 router.get('/tong-quan', baoCaoController.tongQuan);
 router.get('/xu-huong', baoCaoController.xuHuong);
+router.get('/bao-cao-nam', baoCaoController.baoCaoNam);
 
 module.exports = router;

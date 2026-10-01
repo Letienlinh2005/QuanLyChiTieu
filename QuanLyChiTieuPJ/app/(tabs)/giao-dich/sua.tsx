@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { useAppStore } from '../../../src/store/appStore';
 import { useVi } from '../../../src/hooks/useVi';
 import { useDanhMuc } from '../../../src/hooks/useDanhMuc';
@@ -46,9 +46,13 @@ export default function SuaGiaoDichScreen() {
   const [ngayGiaoDich, setNgayGiaoDich] = useState(() => new Date());
   const [dangChonNgay, setDangChonNgay] = useState(false);
 
-  const xuLyChonNgay = (event: DateTimePickerEvent, ngay?: Date) => {
+  const xuLyDoiNgay = (_event: DateTimePickerChangeEvent, ngay?: Date) => {
     if (ngay) setNgayGiaoDich(ngay);
-    if (event.type === 'dismissed' || Platform.OS !== 'ios') setDangChonNgay(false);
+    if (Platform.OS !== 'ios') setDangChonNgay(false);
+  };
+
+  const xuLyDongPicker = () => {
+    setDangChonNgay(false);
   };
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -310,7 +314,8 @@ export default function SuaGiaoDichScreen() {
             maximumDate={new Date()}
             mode="date"
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            onChange={xuLyChonNgay}
+            onChange={xuLyDoiNgay}
+            onDismiss={xuLyDongPicker}
           />
         )}
 
