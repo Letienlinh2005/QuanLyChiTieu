@@ -55,7 +55,6 @@ export default function SuaGiaoDichScreen() {
     setDangChonNgay(false);
   };
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (danhSachGiaoDich && maGiaoDich) {
       const gd = danhSachGiaoDich.find(g => g.maGiaoDich === maGiaoDich);
@@ -70,7 +69,6 @@ export default function SuaGiaoDichScreen() {
       }
     }
   }, [danhSachGiaoDich, maGiaoDich]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loaiDanhMuc = loai === 'Thu' ? 'Thu' : loai === 'Chi' ? 'Chi' : undefined;
   const { data: danhSachDanhMuc } = useDanhMuc(maSoChiTieu, loaiDanhMuc);

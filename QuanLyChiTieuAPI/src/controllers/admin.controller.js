@@ -138,7 +138,6 @@ exports.doiTrangThaiNguoiDung = async (req, res) => {
     }
 };
 
-// SỔ CHI TIÊU
 exports.layDanhSachSoChiTieu = async (req, res) => {
     const { tuKhoa = '', loai = '' } = req.query;
 
@@ -172,7 +171,6 @@ exports.layDanhSachSoChiTieu = async (req, res) => {
     }
 };
 
-// DANH MỤC MẪU
 exports.layDanhSachDanhMucMau = async (req, res) => {
     try {
         const [rows] = await pool.query(
@@ -221,7 +219,6 @@ exports.xoaDanhMucMau = async (req, res) => {
     }
 };
 
-// GIAO DỊCH
 exports.layDanhSachGiaoDichToanHeThong = async (req, res) => {
     const { tuKhoa = '', loai = '', trang = 1, soDong = 20 } = req.query;
 

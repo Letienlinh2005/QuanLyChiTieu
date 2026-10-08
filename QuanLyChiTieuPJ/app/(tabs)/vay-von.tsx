@@ -13,6 +13,7 @@ import {
   useDanhSachVay, useThemVay, useXoaVay, useCapNhatVay,
   useDanhSachChoVay, useThemChoVay, useXoaChoVay, useCapNhatChoVay,
 } from '../../src/hooks/useVayVon';
+import { useVi } from '../../src/hooks/useVi';
 import { KhoanVay, TaoKhoanVayDto, tinhLaiSuat } from '../../src/types/vayVon';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { useNhacTraLai } from '../../src/hooks/useNhacTraLai';
@@ -206,6 +207,8 @@ function ModalThemVay({
   const [form, setForm] = useState<FormVay>(FORM_RONG);
   const [hienDatePicker, setHienDatePicker] = useState(false);
   const [ngayChon, setNgayChon] = useState(new Date());
+  const [maViChon, setMaViChon] = useState<number | undefined>(undefined);
+  const { data: dsVi = [] } = useVi(maSoChiTieu);
   const themVay = useThemVay();
   const themChoVay = useThemChoVay();
 
@@ -223,7 +226,7 @@ function ModalThemVay({
     const goc = parseSoTien(form.soTienGoc);
     const lai = parseFloat(form.laiSuatNam);
     const kyHan = parseInt(form.kyHanThang);
-    if (!goc || !lai || !kyHan) return null;
+    if (!goc || isNaN(lai) || lai < 0 || !kyHan) return null;
     return tinhLaiSuat(goc, lai, kyHan);
   };
   const xemTruoc = xemTruocLai();
@@ -233,22 +236,23 @@ function ModalThemVay({
     const laiSuatNam = parseFloat(form.laiSuatNam);
     const kyHanThang = parseInt(form.kyHanThang);
 
-    if (!form.tenKhoanVay || !soTienGoc || !laiSuatNam || !kyHanThang || !form.ngayVay) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng điền đầy đủ các trường bắt buộc.');
+    if (!form.tenKhoanVay.trim() || !soTienGoc || form.laiSuatNam === '' || isNaN(laiSuatNam) || laiSuatNam < 0 || !kyHanThang || !form.ngayVay) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng điền đầy đủ các trường bắt buộc (lãi suất nhập 0 nếu không tính lãi).');
       return;
     }
 
     const dto: TaoKhoanVayDto = {
-      maSoChiTieu, tenKhoanVay: form.tenKhoanVay,
+      maSoChiTieu, tenKhoanVay: form.tenKhoanVay.trim(),
       soTienGoc, laiSuatNam, kyHanThang,
       ngayVay: form.ngayVay, ghiChu: form.ghiChu,
       ngayTraLaiHangThang: form.ngayTraLaiHangThang ? parseInt(form.ngayTraLaiHangThang) : null,
+      maVi: maViChon,
     };
 
     const mutate = loai === 'vay' ? themVay.mutate : themChoVay.mutate;
     mutate(dto, {
-      onSuccess: () => { setForm(FORM_RONG); setNgayChon(new Date()); onDong(); },
-      onError: () => Alert.alert('Lỗi', 'Không thể lưu khoản vay.'),
+      onSuccess: () => { setForm(FORM_RONG); setNgayChon(new Date()); setMaViChon(undefined); onDong(); },
+      onError: (err: any) => Alert.alert('Lỗi', err?.response?.data?.message || 'Không thể lưu khoản vay.'),
     });
   };
 
@@ -295,10 +299,10 @@ function ModalThemVay({
 
             {/* Lãi suất */}
             <View style={styles.formTruong}>
-              <Text style={[styles.formNhan, { color: colors.textMuted }]}>Lãi suất (%/năm) *</Text>
+              <Text style={[styles.formNhan, { color: colors.textMuted }]}>Lãi suất (%/năm) * (nhập 0 nếu không lấy lãi)</Text>
               <TextInput
                 style={[styles.formInput, { color: colors.text, backgroundColor: isDark ? '#1e1e2e' : '#f8fafc', borderColor: colors.border }]}
-                placeholder="VD: 8.5"
+                placeholder="VD: 8.5 (hoặc 0)"
                 placeholderTextColor={colors.textMuted}
                 value={form.laiSuatNam}
                 onChangeText={nhapTruong('laiSuatNam')}
@@ -344,6 +348,57 @@ function ModalThemVay({
                 />
               )}
             </View>
+
+            {/* Chọn ví liên kết (tuỳ chọn) */}
+            {dsVi.length > 0 && (
+              <View style={styles.formTruong}>
+                <Text style={[styles.formNhan, { color: colors.textMuted }]}>
+                  {loai === 'vay' ? '💳 Ví nhận tiền giải ngân (tuỳ chọn)' : '💳 Ví trích tiền cho vay (tuỳ chọn)'}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginTop: 4 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.viTag,
+                      {
+                        backgroundColor: !maViChon ? colors.primary : (isDark ? '#1e1e2e' : '#f1f5f9'),
+                        borderColor: !maViChon ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setMaViChon(undefined)}
+                  >
+                    <Text style={{ color: !maViChon ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
+                      Không liên kết
+                    </Text>
+                  </TouchableOpacity>
+                  {dsVi.map((v: any) => {
+                    const dangChon = maViChon === v.MaVi;
+                    return (
+                      <TouchableOpacity
+                        key={v.MaVi}
+                        style={[
+                          styles.viTag,
+                          {
+                            backgroundColor: dangChon ? colors.primary : (isDark ? '#1e1e2e' : '#f1f5f9'),
+                            borderColor: dangChon ? colors.primary : colors.border,
+                            marginLeft: 8,
+                          },
+                        ]}
+                        onPress={() => setMaViChon(v.MaVi)}
+                      >
+                        <Text style={{ color: dangChon ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
+                          {v.BieuTuong} {v.TenVi}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                {maViChon ? (
+                  <Text style={{ fontSize: 12, color: colors.primary, marginTop: 4 }}>
+                    ✓ Sẽ tự động tạo giao dịch {loai === 'vay' ? 'Thu' : 'Chi'} vào ví này
+                  </Text>
+                ) : null}
+              </View>
+            )}
 
             {/* Ghi chú */}
             <View style={styles.formTruong}>
@@ -428,7 +483,7 @@ function DanhSachTab({
   const dangTai = loai === 'vay' ? lVay : lCho;
 
   const tongGoc = danhSach.reduce((s, k) => k.trangThai === 'DangVay' ? s + k.soTienGoc : s, 0);
-  const tongLaiThang = danhSach
+  const tongTraThang = danhSach
     .filter(k => k.trangThai === 'DangVay')
     .reduce((s, k) => s + tinhLaiSuat(k.soTienGoc, k.laiSuatNam, k.kyHanThang).traMoiThang, 0);
 
@@ -444,17 +499,17 @@ function DanhSachTab({
             </Text>
           </View>
           <View style={[styles.tongKetO, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.tongKetNhan, { color: colors.textMuted }]}>Lãi đơn/tháng</Text>
-            <Text style={[styles.tongKetGiaTri, { color: '#f59e0b' }]}>{formatCurrency(tongLaiThang)}</Text>
+            <Text style={[styles.tongKetNhan, { color: colors.textMuted }]}>Ước tính trả/tháng</Text>
+            <Text style={[styles.tongKetGiaTri, { color: '#f59e0b' }]}>{formatCurrency(tongTraThang)}</Text>
           </View>
         </View>
       )}
 
-      {/* Ghi chú: không ảnh hưởng ví */}
+      {/* Ghi chú */}
       <View style={[styles.infoBanner, { backgroundColor: isDark ? '#1e293b' : '#f0f9ff', borderColor: isDark ? '#334155' : '#bae6fd' }]}>
         <Ionicons name="information-circle-outline" size={14} color={isDark ? '#7dd3fc' : '#0284c7'} />
         <Text style={[styles.infoBannerText, { color: isDark ? '#7dd3fc' : '#0369a1' }]}>
-          Module này chỉ theo dõi lãi suất và dư nợ — không tự động cộng/trừ số dư ví.
+          Có thể liên kết với ví khi tạo khoản vay/cho vay để tự động ghi nhận giao dịch vào sổ.
         </Text>
       </View>
 
@@ -467,7 +522,7 @@ function DanhSachTab({
             Chưa có khoản {loai === 'vay' ? 'vay ngân hàng' : 'cho vay'} nào.
           </Text>
           <Text style={[styles.rongText, { color: colors.textMuted, fontSize: 12, marginTop: 4 }]}>
-            💡 Chức năng này giúp theo dõi lãi suất, dư nợ — không ảnh hưởng số dư ví.
+            💡 Có thể liên kết ví để tự động sinh giao dịch vào báo cáo.
           </Text>
         </View>
       ) : (
@@ -617,4 +672,5 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12, marginBottom: 20,
   },
   nutLuuText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  viTag: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
 });

@@ -44,12 +44,12 @@ export async function xinQuyenNotification(): Promise<boolean> {
 }
 
 /**
- * Lên lịch notification nhắc trả lãi cho danh sách khoản vay/cho vay.
+ * Lên lịch notification nhắc trả lãi cho danh sách khoản vay và nhắc đòi tiền cho khoản cho vay.
  * Silent-skip nếu đang chạy trong Expo Go.
  */
 export async function datLichNhacTraLai(
-  danhSachVay: KhoanVay[],
-  loai: 'vay' | 'cho-vay' = 'vay'
+  danhSachVay: KhoanVay[] = [],
+  danhSachChoVay: KhoanVay[] = []
 ): Promise<void> {
   if (!Notifications) return; // Expo Go — skip
 
@@ -59,23 +59,10 @@ export async function datLichNhacTraLai(
     const daCoQuyen = await xinQuyenNotification();
     if (!daCoQuyen) return;
 
-    const homNay = new Date();
-
-    for (const khoan of danhSachVay) {
-      if (khoan.trangThai !== 'DangVay' || !khoan.ngayTraLaiHangThang) continue;
+    const lenLichItem = async (khoan: KhoanVay, loai: 'vay' | 'cho-vay') => {
+      if (khoan.trangThai !== 'DangVay' || !khoan.ngayTraLaiHangThang) return;
 
       const ngayTrongThang = khoan.ngayTraLaiHangThang;
-
-      const ngayKichHoat = new Date(
-        homNay.getFullYear(),
-        homNay.getMonth(),
-        ngayTrongThang,
-        8, 0, 0
-      );
-      if (ngayKichHoat <= homNay) {
-        ngayKichHoat.setMonth(ngayKichHoat.getMonth() + 1);
-      }
-
       const emoji = loai === 'vay' ? '🏦' : '💸';
       const tieuDe = loai === 'vay'
         ? `${emoji} Đến hạn trả lãi: ${khoan.tenKhoanVay}`
@@ -84,17 +71,25 @@ export async function datLichNhacTraLai(
         ? `Hôm nay là ngày ${ngayTrongThang} — kỳ trả lãi hàng tháng. Gốc: ${formatCurrency(khoan.soTienGoc)}.`
         : `Hôm nay là ngày ${ngayTrongThang} — nhớ liên hệ người vay. Gốc: ${formatCurrency(khoan.soTienGoc)}.`;
 
-      await Notifications.scheduleNotificationAsync({
-        identifier: `vay-${khoan.maVay}`,
+      await Notifications!.scheduleNotificationAsync({
+        identifier: `${loai}-${khoan.maVay}`,
         content: { title: tieuDe, body: noiDung, sound: true, data: { maVay: khoan.maVay, loai } },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          type: Notifications!.SchedulableTriggerInputTypes.CALENDAR,
           day: ngayTrongThang,
           hour: 8,
           minute: 0,
           repeats: true,
         },
       });
+    };
+
+    for (const khoan of danhSachVay) {
+      await lenLichItem(khoan, 'vay');
+    }
+
+    for (const khoan of danhSachChoVay) {
+      await lenLichItem(khoan, 'cho-vay');
     }
   } catch (err) {
     console.warn('[notificationService] Lỗi lên lịch notification:', err);

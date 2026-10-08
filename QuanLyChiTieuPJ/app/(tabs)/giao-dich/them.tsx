@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { useAppStore } from '../../../src/store/appStore';
 import { useVi } from '../../../src/hooks/useVi';
@@ -26,13 +26,14 @@ function ngayThanhChuoiIso(date: Date): string {
 }
 
 export default function ThemGiaoDichScreen() {
+  const params = useLocalSearchParams<{ loai?: LoaiGiaoDich; viNguon?: string }>();
   const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
   const { data: danhSachVi } = useVi(maSoChiTieu);
   const taoGiaoDich = useTaoGiaoDichWithOffline();
   const { isDark, colors } = useAppTheme();
 
-  const [loai, setLoai] = useState<LoaiGiaoDich>('Chi');
-  const [maVi, setMaVi] = useState<number | null>(null);
+  const [loai, setLoai] = useState<LoaiGiaoDich>(params.loai ?? 'Chi');
+  const [maVi, setMaVi] = useState<number | null>(params.viNguon ? Number(params.viNguon) : null);
   const [maViDoi, setMaViDoi] = useState<number | null>(null);
   const [maDanhMuc, setMaDanhMuc] = useState<number | null>(null);
   const [soTien, setSoTien] = useState('');
@@ -134,7 +135,9 @@ export default function ThemGiaoDichScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.nutBack}>
           <Text style={[styles.chuBack, { color: colors.primary }]}>‹ Quay lại</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Thêm giao dịch</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {loai === 'ChuyenKhoan' ? 'Chuyển tiền giữa các ví' : 'Thêm giao dịch'}
+        </Text>
         <View style={styles.nutBack} />
       </View>
 
@@ -168,7 +171,7 @@ export default function ThemGiaoDichScreen() {
         </View>
 
         <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {loai === 'ChuyenKhoan' ? 'Từ ví' : 'Ví'}
+          {loai === 'ChuyenKhoan' ? 'Từ ví (Ví nguồn)' : 'Ví'}
         </Text>
         <View style={styles.chonRow}>
           {(danhSachVi ?? []).map((v) => {
@@ -206,7 +209,7 @@ export default function ThemGiaoDichScreen() {
 
         {loai === 'ChuyenKhoan' && (
           <>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Đến ví</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Đến ví (Ví đích)</Text>
             <View style={styles.chonRow}>
               {viDoiKhaDung.map((v) => {
                 const isSelected = maViDoi === v.maVi;
@@ -310,7 +313,7 @@ export default function ThemGiaoDichScreen() {
         <Text style={[styles.label, { color: colors.textSecondary }]}>Ghi chú (không bắt buộc)</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-          placeholder="VD: Ăn trưa với bạn..."
+          placeholder={loai === 'ChuyenKhoan' ? 'VD: Rút tiền mặt từ ATM, nạp tiền vào ví...' : 'VD: Ăn trưa với bạn...'}
           placeholderTextColor={colors.textMuted}
           value={ghiChu}
           onChangeText={setGhiChu}
@@ -332,7 +335,7 @@ export default function ThemGiaoDichScreen() {
             {taoGiaoDich.isPending
               ? 'Đang lưu...'
               : taoGiaoDich.isOnline
-              ? 'Lưu giao dịch'
+              ? (loai === 'ChuyenKhoan' ? 'Xác nhận chuyển tiền' : 'Lưu giao dịch')
               : '💾 Lưu offline'}
           </Text>
         </TouchableOpacity>

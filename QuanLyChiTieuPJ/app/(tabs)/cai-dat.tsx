@@ -4,11 +4,13 @@ import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '../../src/store/authStore';
 import { useAppTheme, ThemeMode } from '../../src/store/themeStore';
+import { useLoiMoiDen } from '../../src/hooks/useSoChiTieu';
 
 export default function CaiDatScreen() {
     const nguoiDung = useAuthStore((s) => s.nguoiDung);
     const dangXuat = useAuthStore((s) => s.dangXuat);
     const { isDark, themeMode, setThemeMode, colors } = useAppTheme();
+    const { data: loiMoiDen = [] } = useLoiMoiDen();
 
     const xuLyDangXuat = async () => {
         await dangXuat();
@@ -91,6 +93,11 @@ export default function CaiDatScreen() {
                 >
                     <Ionicons name="people-outline" size={20} color={colors.primary} style={styles.menuIcon} />
                     <Text style={[styles.menuText, { color: colors.text }]}>Thành viên & Sổ gia đình</Text>
+                    {loiMoiDen.length > 0 && (
+                        <View style={styles.badgeSoLoiMoi}>
+                            <Text style={styles.badgeText}>{loiMoiDen.length}</Text>
+                        </View>
+                    )}
                     <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
 
@@ -175,6 +182,14 @@ const styles = StyleSheet.create({
     },
     menuIcon: { marginRight: 12 },
     menuText: { flex: 1, fontSize: 15, fontWeight: '500' },
+    badgeSoLoiMoi: {
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        marginRight: 8,
+    },
+    badgeText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
     nutDangXuat: {
         flexDirection: 'row',
         alignItems: 'center',

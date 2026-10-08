@@ -10,6 +10,7 @@ router.use(xacThuc);
 router.get('/', viController.layDanhSach);
 router.post('/', viController.taoMoi);
 router.patch('/:id', viController.capNhat);
+router.put('/:id/luu-tru', viController.doiTrangThaiLuuTru);
 router.delete('/:id', viController.xoa);
 
 module.exports = router;

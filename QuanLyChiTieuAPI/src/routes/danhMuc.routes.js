@@ -8,6 +8,7 @@ router.use(xacThuc);
 router.get('/', danhMucController.layDanhSach);
 router.post('/', danhMucController.taoMoi);
 router.patch('/:id', danhMucController.capNhat);
+router.put('/:id/luu-tru', danhMucController.doiTrangThaiLuuTru);
 router.delete('/:id', danhMucController.xoa);
 
 module.exports = router;

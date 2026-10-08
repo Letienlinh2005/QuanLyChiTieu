@@ -1,0 +1,14 @@
+-- Migration: Tạo bảng LoiMoiSoChiTieu
+CREATE TABLE IF NOT EXISTS LoiMoiSoChiTieu (
+    MaLoiMoi        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    MaSoChiTieu     BIGINT UNSIGNED NOT NULL,
+    MaNguoiMoi      BIGINT UNSIGNED NOT NULL,
+    MaNguoiDuocMoi  BIGINT UNSIGNED NOT NULL,
+    TrangThai       ENUM('DangCho', 'DaChapNhan', 'DaTuChoi') NOT NULL DEFAULT 'DangCho',
+    NgayTao         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    NgayPhanHoi     TIMESTAMP NULL DEFAULT NULL,
+
+    FOREIGN KEY (MaSoChiTieu) REFERENCES SoChiTieu(MaSoChiTieu) ON DELETE CASCADE,
+    FOREIGN KEY (MaNguoiMoi) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE,
+    FOREIGN KEY (MaNguoiDuocMoi) REFERENCES NguoiDung(MaNguoiDung) ON DELETE CASCADE
+);

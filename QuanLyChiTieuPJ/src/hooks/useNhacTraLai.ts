@@ -21,12 +21,7 @@ export function useNhacTraLai() {
   useEffect(() => {
     if (!token || !maSoChiTieu) return;
 
-    const tatCaVay = [
-      ...(dsVay ?? []),
-      ...(dsCho ?? []),
-    ];
-
-    // Lên lịch lại mỗi khi danh sách thay đổi
-    datLichNhacTraLai(tatCaVay, 'vay').catch(console.warn);
+    // Lên lịch lại mỗi khi danh sách thay đổi (phân biệt khoản vay và cho vay)
+    datLichNhacTraLai(dsVay ?? [], dsCho ?? []).catch(console.warn);
   }, [dsVay, dsCho, token, maSoChiTieu]);
 }

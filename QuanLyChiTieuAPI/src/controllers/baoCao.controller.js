@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { kiemTraQuyenSo } = require('../middlewares/auth.middleware');
 
 // Báo cáo tài chính theo năm: thu/chi từng tháng + tổng năm + lợi nhuận
 exports.baoCaoNam = async (req, res) => {
@@ -9,6 +10,11 @@ exports.baoCaoNam = async (req, res) => {
     }
 
     try {
+        const quyen = await kiemTraQuyenSo(req.nguoiDung.maNguoiDung, maSoChiTieu);
+        if (!quyen) {
+            return res.status(403).json({ message: 'Bạn không có quyền truy cập sổ chi tiêu này.' });
+        }
+
         // Thu chi từng tháng trong năm
         const [theoThang] = await pool.query(
             `SELECT MONTH(NgayGiaoDich) AS Thang,
@@ -81,6 +87,11 @@ exports.tongQuan = async (req, res) => {
     }
 
     try {
+        const quyen = await kiemTraQuyenSo(req.nguoiDung.maNguoiDung, maSoChiTieu);
+        if (!quyen) {
+            return res.status(403).json({ message: 'Bạn không có quyền truy cập sổ chi tiêu này.' });
+        }
+
         const [[tongHop]] = await pool.query(
             `SELECT
         COALESCE(SUM(CASE WHEN Loai = 'Thu' THEN SoTien ELSE 0 END), 0) AS TongThu,
@@ -127,6 +138,11 @@ exports.xuHuong = async (req, res) => {
     }
 
     try {
+        const quyen = await kiemTraQuyenSo(req.nguoiDung.maNguoiDung, maSoChiTieu);
+        if (!quyen) {
+            return res.status(403).json({ message: 'Bạn không có quyền truy cập sổ chi tiêu này.' });
+        }
+
         const [rows] = await pool.query(
             `SELECT YEAR(NgayGiaoDich) AS Nam, MONTH(NgayGiaoDich) AS Thang,
           COALESCE(SUM(CASE WHEN Loai = 'Thu' THEN SoTien ELSE 0 END), 0) AS TongThu,
@@ -150,3 +166,4 @@ exports.xuHuong = async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy xu hướng thu chi' });
     }
 };
+

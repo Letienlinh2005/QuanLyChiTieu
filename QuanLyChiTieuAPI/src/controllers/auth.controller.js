@@ -34,6 +34,7 @@ exports.dangKy = async (req, res) => {
         return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
     }
 
+    let conn;
     try {
         const [existed] = await pool.query(
             'SELECT MaNguoiDung FROM NguoiDung WHERE Email = ?',
@@ -45,31 +46,44 @@ exports.dangKy = async (req, res) => {
 
         const matKhauHash = await bcrypt.hash(matKhau, 10);
 
-        const [result] = await pool.query(
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        const [result] = await conn.query(
             'INSERT INTO NguoiDung (Email, MatKhauHash, HoTen) VALUES (?, ?, ?)',
             [email, matKhauHash, hoTen]
         );
+        const maNguoiDungMoi = result.insertId;
 
-        const [soChiTieuResult] = await pool.query(
+        const [soChiTieuResult] = await conn.query(
             'INSERT INTO SoChiTieu (TenSo, LoaiSo, MaNguoiTao) VALUES (?, ?, ?)',
-            [`Sổ của ${hoTen}`, 'CaNhan', result.insertId]
+            [`Sổ của ${hoTen}`, 'CaNhan', maNguoiDungMoi]
         );
+        const maSoChiTieuMoi = soChiTieuResult.insertId;
 
-        await pool.query(
+        await conn.query(
             'INSERT INTO ThanhVienSo (MaSoChiTieu, MaNguoiDung, VaiTro) VALUES (?, ?, ?)',
-            [soChiTieuResult.insertId, result.insertId, 'ChuSo']
+            [maSoChiTieuMoi, maNguoiDungMoi, 'ChuSo']
         );
 
-        const [danhMucMau] = await pool.query('SELECT * FROM DanhMucMau');
+        // Tạo 1 ví mặc định "Tiền mặt" cho sổ mới
+        await conn.query(
+            'INSERT INTO Vi (MaSoChiTieu, TenVi, BieuTuong, LoaiVi, SoDuBanDau, MaNguoiTao) VALUES (?, ?, ?, ?, ?, ?)',
+            [maSoChiTieuMoi, 'Tiền mặt', '💵', 'TienMat', 0, maNguoiDungMoi]
+        );
+
+        const [danhMucMau] = await conn.query('SELECT * FROM DanhMucMau');
         for (const dm of danhMucMau) {
-            await pool.query(
+            await conn.query(
                 'INSERT INTO DanhMuc (MaSoChiTieu, TenDanhMuc, BieuTuong, Loai, LaMacDinh) VALUES (?, ?, ?, ?, 1)',
-                [soChiTieuResult.insertId, dm.TenDanhMuc, dm.BieuTuong, dm.Loai]
+                [maSoChiTieuMoi, dm.TenDanhMuc, dm.BieuTuong, dm.Loai]
             );
         }
 
+        await conn.commit();
+
         const nguoiDung = {
-            MaNguoiDung: result.insertId,
+            MaNguoiDung: maNguoiDungMoi,
             Email: email,
             HoTen: hoTen,
             LinkAvatar: null,
@@ -81,8 +95,11 @@ exports.dangKy = async (req, res) => {
         const token = taoToken(nguoiDung);
         res.status(201).json({ token, nguoiDung: chuyenDoiNguoiDung(nguoiDung) });
     } catch (err) {
-        console.error(err);
+        if (conn) await conn.rollback();
+        console.error('Lỗi khi đăng ký:', err);
         res.status(500).json({ message: 'Lỗi máy chủ khi đăng ký' });
+    } finally {
+        if (conn) conn.release();
     }
 };
 

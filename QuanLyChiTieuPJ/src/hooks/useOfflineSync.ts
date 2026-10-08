@@ -74,9 +74,17 @@ export function useAutoSync() {
         await giaoDichApi.taoMoi(payload);
         await removePending(item.id);
         synced++;
-      } catch (err) {
+      } catch (err: any) {
         console.warn(`[OfflineSync] Không sync được giao dịch #${item.id}:`, err);
-        failedIds.push(item.id);
+        const status = err?.response?.status;
+        // Nếu server từ chối vì lỗi dữ liệu client 4xx (ví dụ ví đã bị xóa, số dư âm, ngày tương lai, sai format):
+        // Xóa bản ghi lỗi khỏi hàng chờ để không bị kẹt lặp vô hạn!
+        if (status && status >= 400 && status < 500) {
+          console.warn(`[OfflineSync] Xóa giao dịch lỗi vĩnh viễn #${item.id} (HTTP ${status}) khỏi hàng chờ.`);
+          await removePending(item.id);
+        } else {
+          failedIds.push(item.id);
+        }
       }
     }
 
@@ -138,8 +146,17 @@ export function useTaoGiaoDichWithOffline() {
           await addPendingGiaoDich(payload);
           options?.onOfflineSaved?.();
         }
-      } catch (err) {
-        // Có mạng nhưng lỗi network → fallback lưu offline
+      } catch (err: any) {
+        // Kiểm tra xem có phải lỗi HTTP client do sai dữ liệu (4xx) không
+        const status = err?.response?.status;
+        if (status && status >= 400 && status < 500) {
+          // Lỗi dữ liệu/validation (ví không thuộc sổ, ngày tương lai, số dư âm...)
+          // KHÔNG LƯU vào hàng chờ offline, báo lỗi ngay cho người dùng!
+          options?.onError?.(err);
+          return;
+        }
+
+        // Lỗi mất mạng (Network Error / timeout / không có response) -> fallback lưu offline
         try {
           await addPendingGiaoDich(payload);
           options?.onOfflineSaved?.();
