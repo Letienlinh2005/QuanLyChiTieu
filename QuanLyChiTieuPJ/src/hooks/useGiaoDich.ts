@@ -22,6 +22,8 @@ export function useTaoGiaoDich() {
       queryClient.invalidateQueries({ queryKey: ['vi', maSo] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSo] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSo] });
+      queryClient.invalidateQueries({ queryKey: ['cac-ngay-trong-thang', maSo] });
       queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSo] });
     },
   });
@@ -37,6 +39,8 @@ export function useCapNhatGiaoDich(maSoChiTieu: number | null) {
       queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['cac-ngay-trong-thang', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSoChiTieu] });
     },
   });
@@ -52,7 +56,23 @@ export function useXoaGiaoDich(maSoChiTieu: number | null) {
       queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['bao-cao-xu-huong', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['cac-ngay-trong-thang', maSoChiTieu] });
       queryClient.invalidateQueries({ queryKey: ['ngan-sach', maSoChiTieu] });
     },
   });
 }
+
+export function useCapNhatAnhBangChung(maSoChiTieu: number | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ maGiaoDich, anhBangChung }: { maGiaoDich: number; anhBangChung: string | null }) =>
+      giaoDichApi.capNhatAnhBangChung(maGiaoDich, anhBangChung),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSoChiTieu] });
+    },
+  });
+}
+

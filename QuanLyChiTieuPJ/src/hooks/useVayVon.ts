@@ -26,6 +26,10 @@ export function useThemVay() {
     mutationFn: vayVonApi.themVay,
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['vay-von-vay', vars.maSoChiTieu] });
+      // Refresh ví vì có thể đã tạo giao dịch Thu
+      queryClient.invalidateQueries({ queryKey: ['vi', vars.maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', vars.maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', vars.maSoChiTieu] });
     },
   });
 }
@@ -36,6 +40,11 @@ export function useCapNhatVay(maSoChiTieu: number | null) {
     mutationFn: vayVonApi.capNhatVay,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vay-von-vay', maSoChiTieu] });
+      // Refresh ví vì tất toán có thể tạo giao dịch Chi
+      queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSoChiTieu] });
     },
   });
 }
@@ -65,6 +74,10 @@ export function useThemChoVay() {
     mutationFn: vayVonApi.themChoVay,
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['vay-von-cho-vay', vars.maSoChiTieu] });
+      // Refresh ví vì có thể đã tạo giao dịch Chi
+      queryClient.invalidateQueries({ queryKey: ['vi', vars.maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', vars.maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', vars.maSoChiTieu] });
     },
   });
 }
@@ -75,6 +88,11 @@ export function useCapNhatChoVay(maSoChiTieu: number | null) {
     mutationFn: vayVonApi.capNhatChoVay,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vay-von-cho-vay', maSoChiTieu] });
+      // Refresh ví vì tất toán có thể tạo giao dịch Thu (thu hồi)
+      queryClient.invalidateQueries({ queryKey: ['vi', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['giao-dich', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-tong-quan', maSoChiTieu] });
+      queryClient.invalidateQueries({ queryKey: ['bao-cao-ngay', maSoChiTieu] });
     },
   });
 }

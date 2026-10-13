@@ -1,9 +1,11 @@
 import { useMemo, useState, useCallback } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
+  Image, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAppStore } from '../../../src/store/appStore';
 import { useGiaoDich, useXoaGiaoDich } from '../../../src/hooks/useGiaoDich';
 import { useAppTheme } from '../../../src/store/themeStore';
@@ -23,6 +25,7 @@ export default function DanhSachGiaoDichScreen() {
   const homNay = new Date();
   const [thang, setThang] = useState(homNay.getMonth() + 1);
   const [nam, setNam] = useState(homNay.getFullYear());
+  const [anhXem, setAnhXem] = useState<string | null>(null);
 
   const { data: danhSach, isLoading, isError, refetch } = useGiaoDich(maSoChiTieu, thang, nam);
   const xoaGiaoDich = useXoaGiaoDich(maSoChiTieu);
@@ -126,35 +129,68 @@ export default function DanhSachGiaoDichScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.giaoDichCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => item.anhBangChung ? setAnhXem(item.anhBangChung) : xuLyTuyChon(item)}
               onLongPress={() => xuLyTuyChon(item)}
             >
               <Text style={styles.icon}>
                 {item.loai === 'ChuyenKhoan' ? '🔁' : item.bieuTuongDanhMuc ?? '📌'}
               </Text>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.tenDanhMuc, { color: colors.text }]} numberOfLines={1}>
-                  {item.loai === 'ChuyenKhoan' ? 'Chuyển khoản' : item.tenDanhMuc ?? 'Khác'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.tenDanhMuc, { color: colors.text }]} numberOfLines={1}>
+                    {item.loai === 'ChuyenKhoan' ? 'Chuyển khoản' : item.tenDanhMuc ?? 'Khác'}
+                  </Text>
+                  {item.anhBangChung && (
+                    <Ionicons name="image-outline" size={14} color={colors.primary} />
+                  )}
+                </View>
                 <Text style={[styles.chiTietPhu, { color: colors.textMuted }]}>
                   {item.tenVi} · {formatDate(item.ngayGiaoDich)}
                   {item.ghiChu ? ` · ${item.ghiChu}` : ''}
                 </Text>
               </View>
-              <Text
-                style={[
-                  styles.soTien,
-                  {
-                    color: item.loai === 'Thu' ? colors.success
-                      : item.loai === 'Chi' ? colors.danger : colors.textMuted,
-                  },
-                ]}
-              >
-                {item.loai === 'Thu' ? '+' : item.loai === 'Chi' ? '-' : ''}{formatCurrency(item.soTien)}
-              </Text>
+
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <Text
+                  style={[
+                    styles.soTien,
+                    {
+                      color: item.loai === 'Thu' ? colors.success
+                        : item.loai === 'Chi' ? colors.danger : colors.textMuted,
+                    },
+                  ]}
+                >
+                  {item.loai === 'Thu' ? '+' : item.loai === 'Chi' ? '-' : ''}{formatCurrency(item.soTien)}
+                </Text>
+
+                {item.anhBangChung && (
+                  <TouchableOpacity
+                    style={styles.anhThumbBtn}
+                    onPress={() => setAnhXem(item.anhBangChung!)}
+                  >
+                    <Image source={{ uri: item.anhBangChung }} style={styles.anhThumb} />
+                    <View style={styles.badgeCam}>
+                      <Ionicons name="search" size={9} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
             </TouchableOpacity>
           )}
         />
       )}
+
+      {/* Modal xem ảnh bằng chứng kích thước lớn */}
+      <Modal visible={!!anhXem} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalDong} onPress={() => setAnhXem(null)}>
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+          {anhXem && (
+            <Image source={{ uri: anhXem }} style={styles.anhFull} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
@@ -193,6 +229,25 @@ const styles = StyleSheet.create({
   tenDanhMuc: { fontSize: 15, fontWeight: '600' },
   chiTietPhu: { fontSize: 12, marginTop: 2 },
   soTien: { fontSize: 15, fontWeight: '700', marginLeft: 8 },
+  anhThumbBtn: {
+    position: 'relative', marginTop: 2, borderRadius: 6, overflow: 'hidden',
+  },
+  anhThumb: {
+    width: 38, height: 38, borderRadius: 6,
+  },
+  badgeCam: {
+    position: 'absolute', bottom: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 4, padding: 2,
+  },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16,
+  },
+  modalDong: {
+    position: 'absolute', top: 50, right: 20, zIndex: 10,
+  },
+  anhFull: {
+    width: '100%', height: '80%', borderRadius: 12,
+  },
   fab: {
     position: 'absolute', right: 20, bottom: 24, width: 56, height: 56, borderRadius: 28,
     justifyContent: 'center', alignItems: 'center',

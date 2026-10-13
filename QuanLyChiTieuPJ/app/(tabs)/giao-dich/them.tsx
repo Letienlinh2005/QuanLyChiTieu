@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppStore } from '../../../src/store/appStore';
 import { useVi } from '../../../src/hooks/useVi';
 import { useDanhMuc } from '../../../src/hooks/useDanhMuc';
 import { useTaoGiaoDichWithOffline } from '../../../src/hooks/useOfflineSync';
 import { LoaiGiaoDich } from '../../../src/types/giaoDich';
 import { useAppTheme } from '../../../src/store/themeStore';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const CAC_LOAI_GIAO_DICH: { value: LoaiGiaoDich; label: string }[] = [
   { value: 'Chi', label: 'Chi tiền' },
@@ -40,6 +43,7 @@ export default function ThemGiaoDichScreen() {
   const [ghiChu, setGhiChu] = useState('');
   const [ngayGiaoDich, setNgayGiaoDich] = useState(() => new Date());
   const [dangChonNgay, setDangChonNgay] = useState(false);
+  const [anhBangChung, setAnhBangChung] = useState<string | null>(null);
 
   const xuLyDoiNgay = (_event: DateTimePickerChangeEvent, ngay?: Date) => {
     if (ngay) setNgayGiaoDich(ngay);
@@ -62,6 +66,50 @@ export default function ThemGiaoDichScreen() {
     setLoai(loaiMoi);
     setMaDanhMuc(null);
     if (loaiMoi !== 'ChuyenKhoan') setMaViDoi(null);
+  };
+
+  const chupAnh = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Quyền bị từ chối', 'Cần cấp quyền truy cập camera để chụp ảnh bằng chứng.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setAnhBangChung(`data:image/jpeg;base64,${asset.base64}`);
+    }
+  };
+
+  const chonTuThuVien = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Quyền bị từ chối', 'Cần cấp quyền truy cập thư viện ảnh.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setAnhBangChung(`data:image/jpeg;base64,${asset.base64}`);
+    }
+  };
+
+  const hienThiChonAnh = () => {
+    Alert.alert('Ảnh bằng chứng', 'Chọn nguồn ảnh', [
+      { text: 'Chụp ảnh', onPress: chupAnh },
+      { text: 'Chọn từ thư viện', onPress: chonTuThuVien },
+      { text: 'Huỷ', style: 'cancel' },
+    ]);
   };
 
   const xuLyLuu = () => {
@@ -105,6 +153,7 @@ export default function ThemGiaoDichScreen() {
         soTien: soTienSo,
         ghiChu: ghiChu.trim() || null,
         ngayGiaoDich: ngayThanhChuoiIso(ngayGiaoDich),
+        anhBangChung: loai !== 'ChuyenKhoan' ? anhBangChung : null,
       },
       {
         onSuccess: () => router.back(),
@@ -319,6 +368,42 @@ export default function ThemGiaoDichScreen() {
           onChangeText={setGhiChu}
         />
 
+        {/* Ảnh bằng chứng - chỉ cho giao dịch Thu/Chi */}
+        {loai !== 'ChuyenKhoan' && (
+          <>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>📸 Ảnh bằng chứng (không bắt buộc)</Text>
+            {anhBangChung ? (
+              <View style={styles.anhContainer}>
+                <Image source={{ uri: anhBangChung }} style={styles.anhPreview} resizeMode="cover" />
+                <View style={styles.anhActions}>
+                  <TouchableOpacity
+                    style={[styles.anhBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={hienThiChonAnh}
+                  >
+                    <Ionicons name="camera-outline" size={16} color={colors.primary} />
+                    <Text style={[styles.anhBtnText, { color: colors.primary }]}>Đổi ảnh</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.anhBtn, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}
+                    onPress={() => setAnhBangChung(null)}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#dc2626" />
+                    <Text style={[styles.anhBtnText, { color: '#dc2626' }]}>Xoá</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.anhChonBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={hienThiChonAnh}
+              >
+                <Ionicons name="camera-outline" size={24} color={colors.textMuted} />
+                <Text style={[styles.anhChonText, { color: colors.textMuted }]}>Chụp hoặc chọn ảnh bằng chứng</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
         {/* Indicator mạng */}
         {!taoGiaoDich.isOnline && (
           <View style={styles.offlineNote}>
@@ -376,6 +461,21 @@ const styles = StyleSheet.create({
   },
   datePickerIcon: { fontSize: 18 },
   datePickerText: { fontSize: 16, fontWeight: '500' },
+  // Ảnh bằng chứng
+  anhContainer: { gap: 8 },
+  anhPreview: { width: '100%', height: 200, borderRadius: 12 },
+  anhActions: { flexDirection: 'row', gap: 8 },
+  anhBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: 8, borderWidth: 1,
+  },
+  anhBtnText: { fontSize: 13, fontWeight: '600' },
+  anhChonBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, paddingVertical: 20, borderRadius: 12, borderWidth: 1.5,
+    borderStyle: 'dashed',
+  },
+  anhChonText: { fontSize: 14 },
   nutLuu: {
     borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 16, marginBottom: 40,
   },

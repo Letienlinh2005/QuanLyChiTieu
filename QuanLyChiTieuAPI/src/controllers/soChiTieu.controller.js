@@ -22,7 +22,6 @@ exports.layDanhSachCuaToi = async (req, res) => {
     }
 };
 
-// Tạo sổ mới (Cá nhân hoặc Gia đình)
 exports.taoMoi = async (req, res) => {
     const maNguoiDung = req.nguoiDung.maNguoiDung;
     const { tenSo, loaiSo } = req.body;
@@ -43,19 +42,16 @@ exports.taoMoi = async (req, res) => {
         );
         const maSoChiTieu = result.insertId;
 
-        // Người tạo là Chủ sổ
         await conn.query(
             'INSERT INTO ThanhVienSo (MaSoChiTieu, MaNguoiDung, VaiTro) VALUES (?, ?, "ChuSo")',
             [maSoChiTieu, maNguoiDung]
         );
 
-        // Tạo 1 ví mặc định "Tiền mặt" cho sổ mới
         await conn.query(
             'INSERT INTO Vi (MaSoChiTieu, TenVi, BieuTuong, LoaiVi, SoDuBanDau, MaNguoiTao) VALUES (?, ?, ?, ?, ?, ?)',
             [maSoChiTieu, 'Tiền mặt', '💵', 'TienMat', 0, maNguoiDung]
         );
 
-        // Khởi tạo danh mục mẫu cho sổ mới
         const [danhMucMau] = await conn.query('SELECT * FROM DanhMucMau');
         for (const dm of danhMucMau) {
             await conn.query(
@@ -75,13 +71,11 @@ exports.taoMoi = async (req, res) => {
     }
 };
 
-// 1. Lấy danh sách thành viên của 1 sổ
 exports.layDanhSachThanhVien = async (req, res) => {
     const { id } = req.params;
     const maNguoiDung = req.nguoiDung.maNguoiDung;
 
     try {
-        // Kiểm tra quyền truy cập sổ
         const quyen = await kiemTraQuyenSo(maNguoiDung, id);
         if (!quyen) {
             return res.status(403).json({ message: 'Bạn không có quyền truy cập sổ chi tiêu này.' });
@@ -102,7 +96,6 @@ exports.layDanhSachThanhVien = async (req, res) => {
     }
 };
 
-// 2. Gửi lời mời thành viên mới vào sổ (qua email) - Chỉ ChuSo hoặc QuanTri được mời
 exports.moiThanhVien = async (req, res) => {
     const { id } = req.params;
     const { email } = req.body;
@@ -113,31 +106,26 @@ exports.moiThanhVien = async (req, res) => {
     }
 
     try {
-        // Kiểm tra quyền: Chỉ ChuSo hoặc QuanTri mới được mời
         const quyen = await kiemTraQuyenSo(maNguoiMoi, id);
         if (!quyen || (quyen.VaiTro !== 'ChuSo' && quyen.VaiTro !== 'QuanTri')) {
             return res.status(403).json({ message: 'Chỉ Chủ sổ hoặc Quản trị viên mới có quyền mời thành viên.' });
         }
 
-        // Tìm người dùng qua email
         const [nguoiDung] = await pool.query('SELECT MaNguoiDung, HoTen, Email FROM NguoiDung WHERE Email = ?', [email.trim()]);
         if (nguoiDung.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy tài khoản với email này. Vui lòng kiểm tra lại.' });
         }
         const maNguoiDuocMoi = nguoiDung[0].MaNguoiDung;
 
-        // Không cho tự mời chính mình
         if (maNguoiDuocMoi === maNguoiMoi) {
             return res.status(400).json({ message: 'Bạn không thể mời chính mình' });
         }
 
-        // Kiểm tra xem đã là thành viên trong sổ chưa
         const [thanhVien] = await pool.query('SELECT 1 FROM ThanhVienSo WHERE MaSoChiTieu = ? AND MaNguoiDung = ?', [id, maNguoiDuocMoi]);
         if (thanhVien.length > 0) {
             return res.status(400).json({ message: 'Người này đã là thành viên của sổ' });
         }
 
-        // Kiểm tra xem đã có lời mời đang chờ phản hồi chưa
         const [loiMoiCu] = await pool.query(
             'SELECT 1 FROM LoiMoiSoChiTieu WHERE MaSoChiTieu = ? AND MaNguoiDuocMoi = ? AND TrangThai = "DangCho"',
             [id, maNguoiDuocMoi]
@@ -146,7 +134,6 @@ exports.moiThanhVien = async (req, res) => {
             return res.status(400).json({ message: 'Đã gửi lời mời đến người dùng này trước đó, đang chờ phản hồi.' });
         }
 
-        // Tạo bản ghi lời mời
         await pool.query(
             'INSERT INTO LoiMoiSoChiTieu (MaSoChiTieu, MaNguoiMoi, MaNguoiDuocMoi, TrangThai) VALUES (?, ?, ?, "DangCho")',
             [id, maNguoiMoi, maNguoiDuocMoi]
@@ -159,7 +146,6 @@ exports.moiThanhVien = async (req, res) => {
     }
 };
 
-// 3. Lấy danh sách lời mời ĐẾN người dùng hiện tại (lời mời đang chờ chấp nhận)
 exports.layDanhSachLoiMoiDen = async (req, res) => {
     const maNguoiDung = req.nguoiDung.maNguoiDung;
 
@@ -191,13 +177,11 @@ exports.layDanhSachLoiMoiDen = async (req, res) => {
     }
 };
 
-// 4. Lấy danh sách lời mời ĐÃ GỬI của 1 sổ (đang chờ duyệt)
 exports.layDanhSachLoiMoiDaGui = async (req, res) => {
     const { id } = req.params;
     const maNguoiDung = req.nguoiDung.maNguoiDung;
 
     try {
-        // Kiểm tra người gọi phải thuộc sổ
         const quyen = await kiemTraQuyenSo(maNguoiDung, id);
         if (!quyen) {
             return res.status(403).json({ message: 'Bạn không có quyền truy cập sổ chi tiêu này.' });
@@ -226,7 +210,6 @@ exports.layDanhSachLoiMoiDaGui = async (req, res) => {
     }
 };
 
-// 5. Chấp nhận lời mời tham gia sổ
 exports.chapNhanLoiMoi = async (req, res) => {
     const maNguoiDung = req.nguoiDung.maNguoiDung;
     const { maLoiMoi } = req.params;
@@ -247,13 +230,10 @@ exports.chapNhanLoiMoi = async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
-        // Cập nhật trạng thái lời mời
         await conn.query(
             'UPDATE LoiMoiSoChiTieu SET TrangThai = "DaChapNhan", NgayPhanHoi = NOW() WHERE MaLoiMoi = ?',
             [maLoiMoi]
         );
-
-        // Thêm vào bảng thành viên sổ nếu chưa có
         const [daCo] = await conn.query(
             'SELECT 1 FROM ThanhVienSo WHERE MaSoChiTieu = ? AND MaNguoiDung = ?',
             [maSoChiTieu, maNguoiDung]
@@ -265,7 +245,6 @@ exports.chapNhanLoiMoi = async (req, res) => {
             );
         }
 
-        // Cập nhật loại sổ thành 'GiaDinh'
         await conn.query('UPDATE SoChiTieu SET LoaiSo = "GiaDinh" WHERE MaSoChiTieu = ?', [maSoChiTieu]);
 
         await conn.commit();
@@ -279,7 +258,6 @@ exports.chapNhanLoiMoi = async (req, res) => {
     }
 };
 
-// 6. Từ chối lời mời
 exports.tuChoiLoiMoi = async (req, res) => {
     const maNguoiDung = req.nguoiDung.maNguoiDung;
     const { maLoiMoi } = req.params;
@@ -299,7 +277,6 @@ exports.tuChoiLoiMoi = async (req, res) => {
     }
 };
 
-// 7. Hủy lời mời đã gửi (chỉ người gửi hoặc ChuSo/QuanTri của sổ mới được hủy)
 exports.huyLoiMoi = async (req, res) => {
     const { maLoiMoi } = req.params;
     const maNguoiDung = req.nguoiDung.maNguoiDung;
@@ -332,7 +309,6 @@ exports.huyLoiMoi = async (req, res) => {
     }
 };
 
-// 8. Xóa thành viên / Rời sổ
 exports.xoaThanhVien = async (req, res) => {
     const { id, maNguoiDung } = req.params;
     const callerId = req.nguoiDung.maNguoiDung;
@@ -354,7 +330,6 @@ exports.xoaThanhVien = async (req, res) => {
 
         const laTuRoiSo = Number(callerId) === Number(maNguoiDung);
 
-        // Nếu người gọi xóa người khác: bắt buộc phải là ChuSo
         if (!laTuRoiSo && quyenCaller.VaiTro !== 'ChuSo') {
             return res.status(403).json({ message: 'Chỉ Chủ sổ mới có quyền xóa thành viên khác khỏi sổ.' });
         }
@@ -367,7 +342,6 @@ exports.xoaThanhVien = async (req, res) => {
     }
 };
 
-// 9. Cập nhật vai trò thành viên (chỉ Chủ sổ mới được gán QuanTri hoặc ThanhVien)
 exports.capNhatVaiTroThanhVien = async (req, res) => {
     const { id, maNguoiDung } = req.params;
     const { vaiTro } = req.body;

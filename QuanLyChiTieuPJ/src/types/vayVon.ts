@@ -29,6 +29,9 @@ export interface KhoanVay {
   ghiChu?: string;
   trangThai: 'DangVay' | 'DaTatToan';
   ngayTraLaiHangThang?: number | null; // ngày trong tháng (1-31), null = không đặt
+  maVi?: number | null;
+  tenVi?: string | null;
+  bieuTuongVi?: string | null;
 }
 
 export interface TaoKhoanVayDto {

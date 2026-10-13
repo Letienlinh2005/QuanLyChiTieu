@@ -12,7 +12,6 @@ function useSauKhiDangNhap() {
   return async (token: string, nguoiDung: any) => {
     await dangNhapThanhCong(token, nguoiDung);
 
-    // Lấy sổ chi tiêu đầu tiên của người dùng, đặt làm sổ đang dùng
     try {
       const danhSachSo = await soChiTieuApi.layDanhSachCuaToi();
       if (danhSachSo.length > 0) {

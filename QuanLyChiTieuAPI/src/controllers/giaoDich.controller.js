@@ -60,8 +60,30 @@ exports.layDanhSach = async (req, res) => {
     }
 };
 
+// Upload ảnh bằng chứng giao dịch (lưu base64 hoặc URL)
+exports.capNhatAnhBangChung = async (req, res) => {
+    const { id } = req.params;
+    const { anhBangChung } = req.body;
+    try {
+        const [gd] = await pool.query(
+            `SELECT gd.MaGiaoDich FROM GiaoDich gd
+             JOIN ThanhVienSo tv ON tv.MaSoChiTieu = gd.MaSoChiTieu AND tv.MaNguoiDung = ?
+             WHERE gd.MaGiaoDich = ?`,
+            [req.nguoiDung.maNguoiDung, id]
+        );
+        if (gd.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy giao dịch hoặc bạn không có quyền.' });
+        }
+        await pool.query('UPDATE GiaoDich SET AnhBangChung = ? WHERE MaGiaoDich = ?', [anhBangChung || null, id]);
+        res.json({ message: 'Đã cập nhật ảnh bằng chứng' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật ảnh' });
+    }
+};
+
 exports.taoMoi = async (req, res) => {
-    const { maSoChiTieu, maVi, maViDoi, maDanhMuc, loai, soTien, ghiChu, ngayGiaoDich } = req.body;
+    const { maSoChiTieu, maVi, maViDoi, maDanhMuc, loai, soTien, ghiChu, ngayGiaoDich, anhBangChung } = req.body;
     const maNguoiTao = req.nguoiDung.maNguoiDung;
 
     if (!maSoChiTieu || !maVi || !loai || !soTien || !ngayGiaoDich) {
@@ -131,9 +153,9 @@ exports.taoMoi = async (req, res) => {
 
         const [result] = await pool.query(
             `INSERT INTO GiaoDich
-             (MaSoChiTieu, MaVi, MaViDoi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [maSoChiTieu, maVi, maViDoi || null, maDanhMuc || null, maNguoiTao, loai, Number(soTien), ghiChu || null, ngayGiaoDich]
+             (MaSoChiTieu, MaVi, MaViDoi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich, AnhBangChung)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [maSoChiTieu, maVi, maViDoi || null, maDanhMuc || null, maNguoiTao, loai, Number(soTien), ghiChu || null, ngayGiaoDich, anhBangChung || null]
         );
         res.status(201).json({ maGiaoDich: result.insertId });
     } catch (err) {
@@ -166,7 +188,7 @@ exports.xoa = async (req, res) => {
 
 exports.capNhat = async (req, res) => {
     const { id } = req.params;
-    const { maVi, maViDoi, maDanhMuc, loai, soTien, ghiChu, ngayGiaoDich } = req.body;
+    const { maVi, maViDoi, maDanhMuc, loai, soTien, ghiChu, ngayGiaoDich, anhBangChung } = req.body;
 
     if (!maVi || !loai || !soTien || !ngayGiaoDich) {
         return res.status(400).json({ message: 'Thiếu thông tin bắt buộc' });
@@ -223,11 +245,13 @@ exports.capNhat = async (req, res) => {
             }
         }
 
+        const anhMoi = anhBangChung !== undefined ? (anhBangChung || null) : (gd[0].AnhBangChung || null);
+
         await pool.query(
             `UPDATE GiaoDich
-             SET MaVi = ?, MaViDoi = ?, MaDanhMuc = ?, Loai = ?, SoTien = ?, GhiChu = ?, NgayGiaoDich = ?
+             SET MaVi = ?, MaViDoi = ?, MaDanhMuc = ?, Loai = ?, SoTien = ?, GhiChu = ?, NgayGiaoDich = ?, AnhBangChung = ?
              WHERE MaGiaoDich = ?`,
-            [maVi, maViDoi || null, maDanhMuc || null, loai, Number(soTien), ghiChu || null, ngayGiaoDich, id]
+            [maVi, maViDoi || null, maDanhMuc || null, loai, Number(soTien), ghiChu || null, ngayGiaoDich, anhMoi, id]
         );
         res.json({ message: 'Cập nhật giao dịch thành công' });
     } catch (err) {

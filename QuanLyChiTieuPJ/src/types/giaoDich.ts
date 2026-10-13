@@ -9,6 +9,7 @@ export interface GiaoDich {
   soTien: number;
   ghiChu: string | null;
   ngayGiaoDich: string; // ISO date string 'yyyy-MM-dd'
+  anhBangChung?: string | null; // URL hoặc base64 ảnh bằng chứng
 }
 
 // Giao dịch trả về từ danh sách (GET /giao-dich) có kèm thông tin

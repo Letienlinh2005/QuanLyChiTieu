@@ -16,6 +16,7 @@ interface TaoGiaoDichPayload {
   soTien: number;
   ghiChu?: string | null;
   ngayGiaoDich: string; // 'yyyy-MM-dd'
+  anhBangChung?: string | null;
 }
 
 export const giaoDichApi = {
@@ -37,6 +38,7 @@ export const giaoDichApi = {
       tenDanhMuc: row.TenDanhMuc,
       bieuTuongDanhMuc: row.BieuTuongDanhMuc,
       tenVi: row.TenVi,
+      anhBangChung: row.AnhBangChung || null,
     }));
   },
 
@@ -48,6 +50,10 @@ export const giaoDichApi = {
   capNhat: async (payload: { maGiaoDich: number } & Omit<TaoGiaoDichPayload, 'maSoChiTieu'>): Promise<void> => {
     const { maGiaoDich, ...rest } = payload;
     await apiClient.patch(`/giao-dich/${maGiaoDich}`, rest);
+  },
+
+  capNhatAnhBangChung: async (maGiaoDich: number, anhBangChung: string | null): Promise<void> => {
+    await apiClient.patch(`/giao-dich/${maGiaoDich}/anh-bang-chung`, { anhBangChung });
   },
 
   xoa: async (maGiaoDich: number): Promise<void> => {

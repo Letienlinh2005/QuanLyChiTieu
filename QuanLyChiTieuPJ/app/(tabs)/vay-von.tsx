@@ -78,7 +78,7 @@ function KhoanVayCard({
     ]);
   };
 
-  const doiTrangThai = () => {
+  const thucHienDoiTrangThai = () => {
     const trangThaiMoi = item.trangThai === 'DangVay' ? 'DaTatToan' : 'DangVay';
     const body = {
       id: item.maVay,
@@ -88,10 +88,33 @@ function KhoanVayCard({
       kyHanThang: item.kyHanThang,
       ngayVay: item.ngayVay,
       ghiChu: item.ghiChu,
+      ngayTraLaiHangThang: item.ngayTraLaiHangThang ?? null,
       trangThai: trangThaiMoi,
     };
     if (loai === 'vay') capNhatVay.mutate(body);
     else capNhatChoVay.mutate(body);
+  };
+
+  const doiTrangThai = () => {
+    if (item.trangThai === 'DangVay') {
+      const thongBao = loai === 'vay'
+        ? (item.tenVi
+            ? `Tất toán sẽ tự động tạo giao dịch Chi trừ ${formatCurrency(item.soTienGoc)} từ ví "${item.bieuTuongVi || ''} ${item.tenVi}". Bạn có muốn tiếp tục?`
+            : 'Đánh dấu khoản vay này là đã tất toán?')
+        : (item.tenVi
+            ? `Tất toán sẽ tự động thu hồi tiền và tạo giao dịch Thu cộng ${formatCurrency(item.soTienGoc)} vào ví "${item.bieuTuongVi || ''} ${item.tenVi}". Bạn có muốn tiếp tục?`
+            : 'Đánh dấu khoản cho vay này là đã tất toán?');
+
+      Alert.alert('Xác nhận tất toán', thongBao, [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Xác nhận', onPress: thucHienDoiTrangThai },
+      ]);
+    } else {
+      Alert.alert('Hoàn tác tất toán', 'Chuyển trạng thái về Đang vay?', [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Xác nhận', onPress: thucHienDoiTrangThai },
+      ]);
+    }
   };
 
   const mauTrangThai = item.trangThai === 'DaTatToan' ? '#10b981' : '#f59e0b';
@@ -127,6 +150,12 @@ function KhoanVayCard({
           {item.ngayTraLaiHangThang ? (
             <Text style={[styles.cardInfoText, { color: '#f59e0b' }]}>
               ⏰ Hạn trả lãi: mỗi tháng ngày <Text style={{ fontWeight: '700' }}>{item.ngayTraLaiHangThang}</Text>
+            </Text>
+          ) : null}
+          {item.tenVi ? (
+            <Text style={[styles.cardInfoText, { color: colors.primary, marginTop: 3 }]}>
+              💳 {loai === 'vay' ? 'Ví giải ngân / trừ nợ: ' : 'Nguồn tiền / thu hồi: '}
+              <Text style={{ fontWeight: '700' }}>{item.bieuTuongVi ? `${item.bieuTuongVi} ` : ''}{item.tenVi}</Text>
             </Text>
           ) : null}
         </View>

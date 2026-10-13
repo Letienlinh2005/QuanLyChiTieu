@@ -15,7 +15,11 @@ exports.layDanhSachVay = async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            `SELECT * FROM VayVon WHERE MaSoChiTieu = ? AND LoaiVay = 'VayNganHang' ORDER BY NgayVay DESC`,
+            `SELECT v.*, vi.TenVi, vi.BieuTuong AS BieuTuongVi
+             FROM VayVon v
+             LEFT JOIN Vi vi ON vi.MaVi = v.MaVi
+             WHERE v.MaSoChiTieu = ? AND v.LoaiVay = 'VayNganHang'
+             ORDER BY v.NgayVay DESC`,
             [maSoChiTieu]
         );
         res.json(rows.map(r => ({
@@ -28,6 +32,9 @@ exports.layDanhSachVay = async (req, res) => {
             ghiChu: r.GhiChu,
             trangThai: r.TrangThai,
             ngayTraLaiHangThang: r.NgayTraLaiHangThang ?? null,
+            maVi: r.MaVi ?? null,
+            tenVi: r.TenVi ?? null,
+            bieuTuongVi: r.BieuTuongVi ?? null,
         })));
     } catch (err) {
         console.error(err);
@@ -58,10 +65,11 @@ exports.themVay = async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
+        // Lưu maVi vào bảng VayVon để sau tất toán có thể hoàn tiền
         const [result] = await conn.query(
-            `INSERT INTO VayVon (MaSoChiTieu, LoaiVay, TenKhoanVay, SoTienGoc, LaiSuatNam, KyHanThang, NgayVay, GhiChu, TrangThai, NgayTraLaiHangThang)
-             VALUES (?, 'VayNganHang', ?, ?, ?, ?, ?, ?, 'DangVay', ?)`,
-            [maSoChiTieu, tenKhoanVay.trim(), Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, ngayTraLaiHangThang || null]
+            `INSERT INTO VayVon (MaSoChiTieu, LoaiVay, TenKhoanVay, SoTienGoc, LaiSuatNam, KyHanThang, NgayVay, GhiChu, TrangThai, NgayTraLaiHangThang, MaVi)
+             VALUES (?, 'VayNganHang', ?, ?, ?, ?, ?, ?, 'DangVay', ?, ?)`,
+            [maSoChiTieu, tenKhoanVay.trim(), Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, ngayTraLaiHangThang || null, maVi || null]
         );
         const maVayMoi = result.insertId;
 
@@ -69,10 +77,12 @@ exports.themVay = async (req, res) => {
         if (maVi) {
             const [viRows] = await conn.query('SELECT MaVi FROM Vi WHERE MaVi = ? AND MaSoChiTieu = ? AND DaLuuTru = 0', [maVi, maSoChiTieu]);
             if (viRows.length > 0) {
+                const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Thu" ORDER BY (TenDanhMuc = "Thu nhập khác") DESC LIMIT 1', [maSoChiTieu]);
+                const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
                 await conn.query(
-                    `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
-                     VALUES (?, ?, ?, 'Thu', ?, ?, ?)`,
-                    [maSoChiTieu, maVi, maNguoiTao, Number(soTienGoc), `Giải ngân khoản vay: ${tenKhoanVay.trim()}`, ngayVay]
+                    `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                     VALUES (?, ?, ?, ?, 'Thu', ?, ?, ?)`,
+                    [maSoChiTieu, maVi, maDanhMuc, maNguoiTao, Number(soTienGoc), `Giải ngân khoản vay: ${tenKhoanVay.trim()}`, ngayVay]
                 );
             }
         }
@@ -92,26 +102,73 @@ exports.themVay = async (req, res) => {
 exports.capNhatVay = async (req, res) => {
     const { id } = req.params;
     const { tenKhoanVay, soTienGoc, laiSuatNam, kyHanThang, ngayVay, ghiChu, trangThai, ngayTraLaiHangThang } = req.body;
+    const maNguoiTao = req.nguoiDung.maNguoiDung;
 
+    let conn;
     try {
         const [vayRows] = await pool.query(
-            `SELECT v.MaVay FROM VayVon v
+            `SELECT v.* FROM VayVon v
              JOIN ThanhVienSo tv ON tv.MaSoChiTieu = v.MaSoChiTieu AND tv.MaNguoiDung = ?
              WHERE v.MaVay = ? AND v.LoaiVay = 'VayNganHang'`,
-            [req.nguoiDung.maNguoiDung, id]
+            [maNguoiTao, id]
         );
         if (vayRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy khoản vay hoặc bạn không có quyền sửa.' });
 
-        const [result] = await pool.query(
+        const vay = vayRows[0];
+        const maSoChiTieu = vay.MaSoChiTieu;
+        const trangThaiMoi = trangThai !== undefined ? trangThai : vay.TrangThai;
+
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // Xử lý tất toán: tạo giao dịch Chi hoàn trả từ ví đã vay vào
+        if (trangThaiMoi === 'DaTatToan' && vay.TrangThai === 'DangVay' && vay.MaVi) {
+            const ngayTatToan = new Date().toISOString().slice(0, 10);
+            const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Chi" ORDER BY (TenDanhMuc = "Khác") DESC LIMIT 1', [maSoChiTieu]);
+            const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
+            await conn.query(
+                `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                 VALUES (?, ?, ?, ?, 'Chi', ?, ?, ?)`,
+                [maSoChiTieu, vay.MaVi, maDanhMuc, maNguoiTao, Number(vay.SoTienGoc),
+                 `Tất toán khoản vay: ${vay.TenKhoanVay}`, ngayTatToan]
+            );
+        }
+
+        // Hoàn tác tất toán: tạo lại giao dịch Thu
+        if (trangThaiMoi === 'DangVay' && vay.TrangThai === 'DaTatToan' && vay.MaVi) {
+            const ngayHoanTac = new Date().toISOString().slice(0, 10);
+            const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Thu" ORDER BY (TenDanhMuc = "Thu nhập khác") DESC LIMIT 1', [maSoChiTieu]);
+            const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
+            await conn.query(
+                `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                 VALUES (?, ?, ?, ?, 'Thu', ?, ?, ?)`,
+                [maSoChiTieu, vay.MaVi, maDanhMuc, maNguoiTao, Number(vay.SoTienGoc),
+                 `Hoàn tác tất toán khoản vay: ${vay.TenKhoanVay}`, ngayHoanTac]
+            );
+        }
+
+        const tenMoi = tenKhoanVay !== undefined ? tenKhoanVay : vay.TenKhoanVay;
+        const gocMoi = soTienGoc !== undefined ? Number(soTienGoc) : Number(vay.SoTienGoc);
+        const laiMoi = laiSuatNam !== undefined ? Number(laiSuatNam) : Number(vay.LaiSuatNam);
+        const kyHanMoi = kyHanThang !== undefined ? Number(kyHanThang) : Number(vay.KyHanThang);
+        const ngayMoi = ngayVay !== undefined ? ngayVay : vay.NgayVay;
+        const ghiChuMoi = ghiChu !== undefined ? (ghiChu || null) : (vay.GhiChu || null);
+        const hanTraLaiMoi = ngayTraLaiHangThang !== undefined ? (ngayTraLaiHangThang || null) : (vay.NgayTraLaiHangThang || null);
+
+        await conn.query(
             `UPDATE VayVon SET TenKhoanVay=?, SoTienGoc=?, LaiSuatNam=?, KyHanThang=?, NgayVay=?, GhiChu=?, TrangThai=?, NgayTraLaiHangThang=?
              WHERE MaVay=? AND LoaiVay='VayNganHang'`,
-            [tenKhoanVay, Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, trangThai, ngayTraLaiHangThang || null, id]
+            [tenMoi, gocMoi, laiMoi, kyHanMoi, ngayMoi, ghiChuMoi, trangThaiMoi, hanTraLaiMoi, id]
         );
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'Không tìm thấy khoản vay' });
+
+        await conn.commit();
         res.json({ message: 'Cập nhật thành công' });
     } catch (err) {
+        if (conn) await conn.rollback();
         console.error(err);
         res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật khoản vay' });
+    } finally {
+        if (conn) conn.release();
     }
 };
 
@@ -149,7 +206,11 @@ exports.layDanhSachChoVay = async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            `SELECT * FROM VayVon WHERE MaSoChiTieu = ? AND LoaiVay = 'ChoVay' ORDER BY NgayVay DESC`,
+            `SELECT v.*, vi.TenVi, vi.BieuTuong AS BieuTuongVi
+             FROM VayVon v
+             LEFT JOIN Vi vi ON vi.MaVi = v.MaVi
+             WHERE v.MaSoChiTieu = ? AND v.LoaiVay = 'ChoVay'
+             ORDER BY v.NgayVay DESC`,
             [maSoChiTieu]
         );
         res.json(rows.map(r => ({
@@ -162,6 +223,9 @@ exports.layDanhSachChoVay = async (req, res) => {
             ghiChu: r.GhiChu,
             trangThai: r.TrangThai,
             ngayTraLaiHangThang: r.NgayTraLaiHangThang ?? null,
+            maVi: r.MaVi ?? null,
+            tenVi: r.TenVi ?? null,
+            bieuTuongVi: r.BieuTuongVi ?? null,
         })));
     } catch (err) {
         console.error(err);
@@ -192,10 +256,11 @@ exports.themChoVay = async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
+        // Lưu maVi vào bảng VayVon để sau tất toán có thể thu hồi tiền về ví
         const [result] = await conn.query(
-            `INSERT INTO VayVon (MaSoChiTieu, LoaiVay, TenKhoanVay, SoTienGoc, LaiSuatNam, KyHanThang, NgayVay, GhiChu, TrangThai, NgayTraLaiHangThang)
-             VALUES (?, 'ChoVay', ?, ?, ?, ?, ?, ?, 'DangVay', ?)`,
-            [maSoChiTieu, tenKhoanVay.trim(), Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, ngayTraLaiHangThang || null]
+            `INSERT INTO VayVon (MaSoChiTieu, LoaiVay, TenKhoanVay, SoTienGoc, LaiSuatNam, KyHanThang, NgayVay, GhiChu, TrangThai, NgayTraLaiHangThang, MaVi)
+             VALUES (?, 'ChoVay', ?, ?, ?, ?, ?, ?, 'DangVay', ?, ?)`,
+            [maSoChiTieu, tenKhoanVay.trim(), Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, ngayTraLaiHangThang || null, maVi || null]
         );
         const maVayMoi = result.insertId;
 
@@ -203,10 +268,12 @@ exports.themChoVay = async (req, res) => {
         if (maVi) {
             const [viRows] = await conn.query('SELECT MaVi FROM Vi WHERE MaVi = ? AND MaSoChiTieu = ? AND DaLuuTru = 0', [maVi, maSoChiTieu]);
             if (viRows.length > 0) {
+                const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Chi" ORDER BY (TenDanhMuc = "Khác") DESC LIMIT 1', [maSoChiTieu]);
+                const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
                 await conn.query(
-                    `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
-                     VALUES (?, ?, ?, 'Chi', ?, ?, ?)`,
-                    [maSoChiTieu, maVi, maNguoiTao, Number(soTienGoc), `Cho vay: ${tenKhoanVay.trim()}`, ngayVay]
+                    `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                     VALUES (?, ?, ?, ?, 'Chi', ?, ?, ?)`,
+                    [maSoChiTieu, maVi, maDanhMuc, maNguoiTao, Number(soTienGoc), `Cho vay: ${tenKhoanVay.trim()}`, ngayVay]
                 );
             }
         }
@@ -226,26 +293,73 @@ exports.themChoVay = async (req, res) => {
 exports.capNhatChoVay = async (req, res) => {
     const { id } = req.params;
     const { tenKhoanVay, soTienGoc, laiSuatNam, kyHanThang, ngayVay, ghiChu, trangThai, ngayTraLaiHangThang } = req.body;
+    const maNguoiTao = req.nguoiDung.maNguoiDung;
 
+    let conn;
     try {
         const [vayRows] = await pool.query(
-            `SELECT v.MaVay FROM VayVon v
+            `SELECT v.* FROM VayVon v
              JOIN ThanhVienSo tv ON tv.MaSoChiTieu = v.MaSoChiTieu AND tv.MaNguoiDung = ?
              WHERE v.MaVay = ? AND v.LoaiVay = 'ChoVay'`,
-            [req.nguoiDung.maNguoiDung, id]
+            [maNguoiTao, id]
         );
         if (vayRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy khoản cho vay hoặc bạn không có quyền sửa.' });
 
-        const [result] = await pool.query(
+        const vay = vayRows[0];
+        const maSoChiTieu = vay.MaSoChiTieu;
+        const trangThaiMoi = trangThai !== undefined ? trangThai : vay.TrangThai;
+
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // Xử lý tất toán cho vay: thu hồi tiền về ví (tạo giao dịch Thu)
+        if (trangThaiMoi === 'DaTatToan' && vay.TrangThai === 'DangVay' && vay.MaVi) {
+            const ngayTatToan = new Date().toISOString().slice(0, 10);
+            const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Thu" ORDER BY (TenDanhMuc = "Thu nhập khác") DESC LIMIT 1', [maSoChiTieu]);
+            const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
+            await conn.query(
+                `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                 VALUES (?, ?, ?, ?, 'Thu', ?, ?, ?)`,
+                [maSoChiTieu, vay.MaVi, maDanhMuc, maNguoiTao, Number(vay.SoTienGoc),
+                 `Thu hồi khoản cho vay: ${vay.TenKhoanVay}`, ngayTatToan]
+            );
+        }
+
+        // Hoàn tác tất toán: trừ lại tiền ví (tạo giao dịch Chi)
+        if (trangThaiMoi === 'DangVay' && vay.TrangThai === 'DaTatToan' && vay.MaVi) {
+            const ngayHoanTac = new Date().toISOString().slice(0, 10);
+            const [dmRows] = await conn.query('SELECT MaDanhMuc FROM DanhMuc WHERE MaSoChiTieu = ? AND Loai = "Chi" ORDER BY (TenDanhMuc = "Khác") DESC LIMIT 1', [maSoChiTieu]);
+            const maDanhMuc = dmRows.length > 0 ? dmRows[0].MaDanhMuc : null;
+            await conn.query(
+                `INSERT INTO GiaoDich (MaSoChiTieu, MaVi, MaDanhMuc, MaNguoiTao, Loai, SoTien, GhiChu, NgayGiaoDich)
+                 VALUES (?, ?, ?, ?, 'Chi', ?, ?, ?)`,
+                [maSoChiTieu, vay.MaVi, maDanhMuc, maNguoiTao, Number(vay.SoTienGoc),
+                 `Hoàn tác tất toán cho vay: ${vay.TenKhoanVay}`, ngayHoanTac]
+            );
+        }
+
+        const tenMoi = tenKhoanVay !== undefined ? tenKhoanVay : vay.TenKhoanVay;
+        const gocMoi = soTienGoc !== undefined ? Number(soTienGoc) : Number(vay.SoTienGoc);
+        const laiMoi = laiSuatNam !== undefined ? Number(laiSuatNam) : Number(vay.LaiSuatNam);
+        const kyHanMoi = kyHanThang !== undefined ? Number(kyHanThang) : Number(vay.KyHanThang);
+        const ngayMoi = ngayVay !== undefined ? ngayVay : vay.NgayVay;
+        const ghiChuMoi = ghiChu !== undefined ? (ghiChu || null) : (vay.GhiChu || null);
+        const hanTraLaiMoi = ngayTraLaiHangThang !== undefined ? (ngayTraLaiHangThang || null) : (vay.NgayTraLaiHangThang || null);
+
+        await conn.query(
             `UPDATE VayVon SET TenKhoanVay=?, SoTienGoc=?, LaiSuatNam=?, KyHanThang=?, NgayVay=?, GhiChu=?, TrangThai=?, NgayTraLaiHangThang=?
              WHERE MaVay=? AND LoaiVay='ChoVay'`,
-            [tenKhoanVay, Number(soTienGoc), Number(laiSuatNam), Number(kyHanThang), ngayVay, ghiChu || null, trangThai, ngayTraLaiHangThang || null, id]
+            [tenMoi, gocMoi, laiMoi, kyHanMoi, ngayMoi, ghiChuMoi, trangThaiMoi, hanTraLaiMoi, id]
         );
-        if (result.affectedRows === 0) return res.status(404).json({ message: 'Không tìm thấy' });
+
+        await conn.commit();
         res.json({ message: 'Cập nhật thành công' });
     } catch (err) {
+        if (conn) await conn.rollback();
         console.error(err);
         res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật khoản cho vay' });
+    } finally {
+        if (conn) conn.release();
     }
 };
 
@@ -268,4 +382,3 @@ exports.xoaChoVay = async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi xóa khoản cho vay' });
     }
 };
-

@@ -1,19 +1,19 @@
--- Tạo bảng VayVon dùng chung cho cả Vay ngân hàng và Cho vay
--- LoaiVay: 'VayNganHang' = mình đang vay | 'ChoVay' = mình cho người khác vay
--- Lưu ý: MaSoChiTieu phải là BIGINT UNSIGNED để khớp với khoá ngoại SoChiTieu
-CREATE TABLE IF NOT EXISTS VayVon (
-    MaVay           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    MaSoChiTieu     BIGINT UNSIGNED NOT NULL,
-    LoaiVay         ENUM('VayNganHang', 'ChoVay') NOT NULL,
-    TenKhoanVay     VARCHAR(200) NOT NULL,        -- Tên ngân hàng / tên người vay
-    SoTienGoc       DECIMAL(18, 2) NOT NULL,       -- Số tiền gốc
-    LaiSuatNam      DECIMAL(5, 2) NOT NULL,        -- Lãi suất %/năm (ví dụ: 8.5)
-    KyHanThang      INT NOT NULL,                  -- Kỳ hạn (số tháng)
-    NgayVay         DATE NOT NULL,                 -- Ngày bắt đầu vay / cho vay
-    GhiChu          TEXT,
-    TrangThai       ENUM('DangVay', 'DaTatToan') NOT NULL DEFAULT 'DangVay',
-    NgayTraLaiHangThang TINYINT UNSIGNED NULL COMMENT 'Ngay trong thang phai tra lai (1-31), NULL = khong dat',
-    TaoLuc          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-- -- Tạo bảng VayVon dùng chung cho cả Vay ngân hàng và Cho vay
+-- -- LoaiVay: 'VayNganHang' = mình đang vay | 'ChoVay' = mình cho người khác vay
+-- -- Lưu ý: MaSoChiTieu phải là BIGINT UNSIGNED để khớp với khoá ngoại SoChiTieu
+-- CREATE TABLE IF NOT EXISTS VayVon (
+--     MaVay           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+--     MaSoChiTieu     BIGINT UNSIGNED NOT NULL,
+--     LoaiVay         ENUM('VayNganHang', 'ChoVay') NOT NULL,
+--     TenKhoanVay     VARCHAR(200) NOT NULL,        -- Tên ngân hàng / tên người vay
+--     SoTienGoc       DECIMAL(18, 2) NOT NULL,       -- Số tiền gốc
+--     LaiSuatNam      DECIMAL(5, 2) NOT NULL,        -- Lãi suất %/năm (ví dụ: 8.5)
+--     KyHanThang      INT NOT NULL,                  -- Kỳ hạn (số tháng)
+--     NgayVay         DATE NOT NULL,                 -- Ngày bắt đầu vay / cho vay
+--     GhiChu          TEXT,
+--     TrangThai       ENUM('DangVay', 'DaTatToan') NOT NULL DEFAULT 'DangVay',
+--     NgayTraLaiHangThang TINYINT UNSIGNED NULL COMMENT 'Ngay trong thang phai tra lai (1-31), NULL = khong dat',
+--     TaoLuc          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (MaSoChiTieu) REFERENCES SoChiTieu(MaSoChiTieu) ON DELETE CASCADE
-);
+--     FOREIGN KEY (MaSoChiTieu) REFERENCES SoChiTieu(MaSoChiTieu) ON DELETE CASCADE
+-- );

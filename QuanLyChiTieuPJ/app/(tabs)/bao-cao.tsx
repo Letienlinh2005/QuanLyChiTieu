@@ -1,15 +1,18 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions,
+  Image, FlatList, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { useAppStore } from '../../src/store/appStore';
-import { useTongQuanThang, useXuHuongThang } from '../../src/hooks/useBaoCao';
+import { useTongQuanThang, useXuHuongThang, useBaoCaoNgay, useCacNgayTrongThang } from '../../src/hooks/useBaoCao';
 import { useBaoCaoNam } from '../../src/hooks/useVayVon';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { useAppTheme } from '../../src/store/themeStore';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { GiaoDichNgay, NgayTrongThang } from '../../src/types/baoCao';
 
 const TEN_THANG = [
   'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
@@ -24,6 +27,241 @@ const MAU_DANH_MUC = [
 ];
 
 const chieuRongManHinh = Dimensions.get('window').width;
+
+function formatNgayNgan(isoDate: string) {
+  const d = new Date(isoDate);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function toIsoDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// ======== Màn hình báo cáo theo NGÀY ========
+function BaoCaoNgay({ maSoChiTieu, isDark, colors }: { maSoChiTieu: number | null; isDark: boolean; colors: any }) {
+  const homNay = new Date();
+  const [ngayChon, setNgayChon] = useState(homNay);
+  const [thang, setThang] = useState(homNay.getMonth() + 1);
+  const [nam, setNam] = useState(homNay.getFullYear());
+  const [anhXemChiTiet, setAnhXemChiTiet] = useState<string | null>(null);
+
+  const ngayStr = toIsoDate(ngayChon);
+  const { data: baoCao, isLoading: dangTaiBaoCao, refetch: refetchBaoCao } = useBaoCaoNgay(maSoChiTieu, ngayStr);
+  const { data: cacNgay, isLoading: dangTaiNgay, refetch: refetchNgay } = useCacNgayTrongThang(maSoChiTieu, thang, nam);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (maSoChiTieu) { refetchBaoCao(); refetchNgay(); }
+    }, [maSoChiTieu, ngayStr])
+  );
+
+  const doiThang = (buoc: number) => {
+    let thangMoi = thang + buoc;
+    let namMoi = nam;
+    if (thangMoi > 12) { thangMoi = 1; namMoi++; }
+    if (thangMoi < 1) { thangMoi = 12; namMoi--; }
+    setThang(thangMoi);
+    setNam(namMoi);
+    // Reset ngày về ngày 1 của tháng mới
+    const ngayMoi = new Date(namMoi, thangMoi - 1, 1);
+    setNgayChon(ngayMoi);
+  };
+
+  // Tạo lưới lịch tháng
+  const ngayDauThang = new Date(nam, thang - 1, 1);
+  const ngayTrongThangMap: Record<string, NgayTrongThang> = {};
+  (cacNgay ?? []).forEach(n => { ngayTrongThangMap[String(n.ngay).slice(0, 10)] = n; });
+
+  const soNgayTrongThang = new Date(nam, thang, 0).getDate();
+  const thuDauThang = ngayDauThang.getDay(); // 0=CN, 1=T2...
+  const thuOffset = thuDauThang === 0 ? 6 : thuDauThang - 1; // Chuyển về T2=0
+
+  const oLich: (number | null)[] = [];
+  for (let i = 0; i < thuOffset; i++) oLich.push(null);
+  for (let i = 1; i <= soNgayTrongThang; i++) oLich.push(i);
+
+  const mauLoai = (loai: string) => {
+    if (loai === 'Thu') return '#10b981';
+    if (loai === 'Chi') return '#ef4444';
+    return '#6366f1';
+  };
+
+  return (
+    <>
+      {/* Header chọn tháng */}
+      <View style={[styles.thangHeader, { backgroundColor: colors.card, borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
+        <TouchableOpacity onPress={() => doiThang(-1)} style={styles.nutThang}>
+          <Text style={[styles.nutThangChu, { color: colors.primary }]}>‹</Text>
+        </TouchableOpacity>
+        <Text style={[styles.thangText, { color: colors.text }]}>{TEN_THANG[thang - 1]} {nam}</Text>
+        <TouchableOpacity onPress={() => doiThang(1)} style={styles.nutThang}>
+          <Text style={[styles.nutThangChu, { color: colors.primary }]}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Header các ngày trong tuần */}
+        <View style={styles.lichHeader}>
+          {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(t => (
+            <Text key={t} style={[styles.lichThu, { color: colors.textMuted }]}>{t}</Text>
+          ))}
+        </View>
+
+        {/* Lưới lịch */}
+        {dangTaiNgay ? (
+          <View style={styles.trangThai}><ActivityIndicator color={colors.primary} /></View>
+        ) : (
+          <View style={styles.lichLuoi}>
+            {oLich.map((ngay, idx) => {
+              if (ngay === null) return <View key={`empty-${idx}`} style={styles.lichO} />;
+              const key = `${nam}-${String(thang).padStart(2, '0')}-${String(ngay).padStart(2, '0')}`;
+              const coGD = ngayTrongThangMap[key];
+              const isChon = toIsoDate(ngayChon) === key;
+              const isHomNay = key === toIsoDate(homNay);
+
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.lichO,
+                    isChon && { backgroundColor: colors.primary, borderRadius: 8 },
+                    !isChon && isHomNay && { borderWidth: 1.5, borderColor: colors.primary, borderRadius: 8 },
+                  ]}
+                  onPress={() => setNgayChon(new Date(nam, thang - 1, ngay))}
+                >
+                  <Text style={[
+                    styles.lichNgay,
+                    { color: isChon ? '#fff' : colors.text },
+                    isHomNay && !isChon && { color: colors.primary, fontWeight: '700' },
+                  ]}>{ngay}</Text>
+                  {coGD && (
+                    <View style={styles.lichDotRow}>
+                      {(coGD.tongThu ?? 0) > 0 && <View style={[styles.lichDot, { backgroundColor: '#10b981' }]} />}
+                      {(coGD.tongChi ?? 0) > 0 && <View style={[styles.lichDot, { backgroundColor: '#ef4444' }]} />}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Tóm tắt ngày đã chọn */}
+        <View style={[styles.ngayTomTat, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.ngayTieuDe, { color: colors.text }]}>
+            📅 {ngayChon.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </Text>
+          {dangTaiBaoCao ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} />
+          ) : (
+            <>
+              <View style={styles.tongQuanRow}>
+                <View style={[styles.tongQuanO, { backgroundColor: isDark ? '#052e16' : '#f0fdf4', borderColor: '#10b981' }]}>
+                  <Text style={[styles.tongQuanLabel, { color: '#059669' }]}>Thu</Text>
+                  <Text style={[styles.tongQuanSoTien, { color: '#10b981' }]}>{formatCurrency(baoCao?.tongThu ?? 0)}</Text>
+                </View>
+                <View style={[styles.tongQuanO, { backgroundColor: isDark ? '#450a0a' : '#fef2f2', borderColor: '#ef4444' }]}>
+                  <Text style={[styles.tongQuanLabel, { color: '#dc2626' }]}>Chi</Text>
+                  <Text style={[styles.tongQuanSoTien, { color: '#ef4444' }]}>{formatCurrency(baoCao?.tongChi ?? 0)}</Text>
+                </View>
+                <View style={[styles.tongQuanO, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.tongQuanLabel, { color: colors.textMuted }]}>Chênh</Text>
+                  <Text style={[styles.tongQuanSoTien, {
+                    color: (baoCao?.chenhLech ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                  }]}>{formatCurrency(baoCao?.chenhLech ?? 0)}</Text>
+                </View>
+              </View>
+
+              {/* Danh sách giao dịch trong ngày */}
+              {(baoCao?.chiTiet ?? []).length === 0 ? (
+                <View style={styles.rongNgay}>
+                  <Ionicons name="calendar-outline" size={36} color={colors.textMuted} />
+                  <Text style={[styles.rongText, { color: colors.textMuted }]}>Không có giao dịch trong ngày này</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Giao dịch trong ngày</Text>
+                  {(baoCao?.chiTiet ?? []).map((gd: GiaoDichNgay) => (
+                    <View key={gd.maGiaoDich} style={[styles.gdItem, { backgroundColor: isDark ? '#1e1e2e' : '#f8fafc', borderColor: colors.border }]}>
+                      <View style={[styles.gdIconBg, { backgroundColor: mauLoai(gd.loai) + '22' }]}>
+                        <Text style={{ fontSize: 16 }}>{gd.bieuTuongDanhMuc ?? (gd.loai === 'ChuyenKhoan' ? '🔄' : gd.loai === 'Thu' ? '💰' : '💸')}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.gdTenDM, { color: colors.text }]}>
+                          {gd.tenDanhMuc ?? (gd.loai === 'ChuyenKhoan' ? 'Chuyển khoản' : gd.loai)}
+                        </Text>
+                        <Text style={[styles.gdVi, { color: colors.textMuted }]}>{gd.bieuTuongVi} {gd.tenVi}</Text>
+                        {gd.ghiChu ? <Text style={[styles.gdGhiChu, { color: colors.textMuted }]} numberOfLines={1}>{gd.ghiChu}</Text> : null}
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.gdSoTien, { color: mauLoai(gd.loai) }]}>
+                          {gd.loai === 'Chi' ? '-' : '+'}{formatCurrency(gd.soTien)}
+                        </Text>
+                        {gd.anhBangChung ? (
+                          <TouchableOpacity
+                            style={styles.anhNho}
+                            onPress={() => setAnhXemChiTiet(gd.anhBangChung!)}
+                            activeOpacity={0.8}
+                          >
+                            <Image source={{ uri: gd.anhBangChung }} style={styles.anhNhoImg} />
+                            <View style={styles.iconScanBadge}>
+                              <Ionicons name="search" size={9} color="#fff" />
+                            </View>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {/* Phân bổ theo danh mục trong ngày */}
+              {(baoCao?.theoDanhMuc ?? []).length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Chi theo danh mục</Text>
+                  {(baoCao?.theoDanhMuc ?? []).map((dm, i) => {
+                    const tongChi = baoCao?.tongChi ?? 1;
+                    const phanTram = tongChi > 0 ? (dm.tongTien / tongChi) * 100 : 0;
+                    return (
+                      <View key={dm.maDanhMuc} style={styles.dmRow}>
+                        <Text style={[styles.dmBieuTuong]}>{dm.bieuTuong}</Text>
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.dmTenRow}>
+                            <Text style={[styles.dmTen, { color: colors.text }]}>{dm.tenDanhMuc}</Text>
+                            <Text style={[styles.dmSoTien, { color: '#ef4444' }]}>{formatCurrency(dm.tongTien)}</Text>
+                          </View>
+                          <View style={[styles.dmThanhBar, { backgroundColor: isDark ? '#27272a' : '#f1f5f9' }]}>
+                            <View style={[styles.dmThanhFill, { width: `${phanTram}%`, backgroundColor: MAU_DANH_MUC[i % MAU_DANH_MUC.length] }]} />
+                          </View>
+                          <Text style={[styles.dmPhanTram, { color: colors.textMuted }]}>{phanTram.toFixed(1)}%</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Modal phóng to xem ảnh bằng chứng giao dịch đối chiếu */}
+      <Modal visible={!!anhXemChiTiet} transparent animationType="fade">
+        <View style={styles.modalOverlayAnh}>
+          <TouchableOpacity style={styles.modalDongAnh} onPress={() => setAnhXemChiTiet(null)}>
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+          {anhXemChiTiet && (
+            <Image source={{ uri: anhXemChiTiet }} style={styles.anhFullSize} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
+    </>
+  );
+}
 
 // ======== Màn hình báo cáo theo THÁNG ========
 function BaoCaoThang({ maSoChiTieu, isDark, colors }: { maSoChiTieu: number | null; isDark: boolean; colors: any }) {
@@ -302,30 +540,35 @@ function BaoCaoNam({ maSoChiTieu, isDark, colors }: { maSoChiTieu: number | null
 export default function BaoCaoScreen() {
   const maSoChiTieu = useAppStore((s) => s.maSoChiTieu);
   const { isDark, colors } = useAppTheme();
-  const [tabHienTai, setTabHienTai] = useState<'thang' | 'nam'>('thang');
+  const [tabHienTai, setTabHienTai] = useState<'ngay' | 'thang' | 'nam'>('ngay');
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* Tab chuyển tháng / năm */}
+      {/* Tab chuyển ngày / tháng / năm */}
       <View style={[styles.tabBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.tabNut, tabHienTai === 'ngay' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+          onPress={() => setTabHienTai('ngay')}
+        >
+          <Text style={[styles.tabText, { color: tabHienTai === 'ngay' ? colors.primary : colors.textMuted }]}>📅 Ngày</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabNut, tabHienTai === 'thang' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setTabHienTai('thang')}
         >
-          <Text style={[styles.tabText, { color: tabHienTai === 'thang' ? colors.primary : colors.textMuted }]}>Theo tháng</Text>
+          <Text style={[styles.tabText, { color: tabHienTai === 'thang' ? colors.primary : colors.textMuted }]}>📊 Tháng</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabNut, tabHienTai === 'nam' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setTabHienTai('nam')}
         >
-          <Text style={[styles.tabText, { color: tabHienTai === 'nam' ? colors.primary : colors.textMuted }]}>Theo năm</Text>
+          <Text style={[styles.tabText, { color: tabHienTai === 'nam' ? colors.primary : colors.textMuted }]}>📈 Năm</Text>
         </TouchableOpacity>
       </View>
 
-      {tabHienTai === 'thang'
-        ? <BaoCaoThang maSoChiTieu={maSoChiTieu} isDark={isDark} colors={colors} />
-        : <BaoCaoNam maSoChiTieu={maSoChiTieu} isDark={isDark} colors={colors} />
-      }
+      {tabHienTai === 'ngay' && <BaoCaoNgay maSoChiTieu={maSoChiTieu} isDark={isDark} colors={colors} />}
+      {tabHienTai === 'thang' && <BaoCaoThang maSoChiTieu={maSoChiTieu} isDark={isDark} colors={colors} />}
+      {tabHienTai === 'nam' && <BaoCaoNam maSoChiTieu={maSoChiTieu} isDark={isDark} colors={colors} />}
     </SafeAreaView>
   );
 }
@@ -340,7 +583,7 @@ const styles = StyleSheet.create({
   tabNut: {
     flex: 1, paddingVertical: 12, alignItems: 'center',
   },
-  tabText: { fontSize: 14, fontWeight: '600' },
+  tabText: { fontSize: 13, fontWeight: '600' },
   thangHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 12, gap: 20,
@@ -354,9 +597,43 @@ const styles = StyleSheet.create({
   },
   tongQuanLabel: { fontSize: 11 },
   tongQuanSoTien: { fontSize: 13, fontWeight: '700', marginTop: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 10, marginTop: 8 },
-  rongText: { fontStyle: 'italic', marginBottom: 20 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10, marginTop: 12 },
+  rongText: { fontStyle: 'italic', marginBottom: 20, fontSize: 13 },
   bieuDoCot: { borderRadius: 12, marginBottom: 20 },
+
+  // Lịch ngày
+  lichHeader: { flexDirection: 'row', marginBottom: 4 },
+  lichThu: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', paddingVertical: 4 },
+  lichLuoi: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 },
+  lichO: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 2 },
+  lichNgay: { fontSize: 13, fontWeight: '500' },
+  lichDotRow: { flexDirection: 'row', gap: 2, marginTop: 1 },
+  lichDot: { width: 4, height: 4, borderRadius: 2 },
+
+  // Tóm tắt ngày
+  ngayTomTat: { borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16 },
+  ngayTieuDe: { fontSize: 14, fontWeight: '700', marginBottom: 12 },
+  rongNgay: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+
+  // Giao dịch item
+  gdItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
+  gdIconBg: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  gdTenDM: { fontSize: 14, fontWeight: '600' },
+  gdVi: { fontSize: 12, marginTop: 1 },
+  gdGhiChu: { fontSize: 11, marginTop: 2, fontStyle: 'italic' },
+  gdSoTien: { fontSize: 14, fontWeight: '700' },
+  anhNho: { marginTop: 4 },
+  anhNhoImg: { width: 40, height: 40, borderRadius: 6 },
+
+  // Danh mục bar
+  dmRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  dmBieuTuong: { fontSize: 20, marginTop: 2 },
+  dmTenRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  dmTen: { fontSize: 13, fontWeight: '600' },
+  dmSoTien: { fontSize: 13, fontWeight: '700' },
+  dmThanhBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  dmThanhFill: { height: 6, borderRadius: 3 },
+  dmPhanTram: { fontSize: 11, marginTop: 2 },
 
   // Lợi nhuận card
   loiNhuanCard: {
@@ -389,4 +666,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1,
   },
   bangRowText: { fontSize: 12 },
+  iconScanBadge: {
+    position: 'absolute', bottom: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 4, padding: 2,
+  },
+  modalOverlayAnh: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center', padding: 16,
+  },
+  modalDongAnh: {
+    position: 'absolute', top: 50, right: 20, zIndex: 10,
+  },
+  anhFullSize: {
+    width: '100%', height: '80%', borderRadius: 12,
+  },
 });

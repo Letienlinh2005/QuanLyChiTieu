@@ -8,6 +8,7 @@ router.use(xacThuc);
 router.get('/', giaoDichController.layDanhSach);
 router.post('/', giaoDichController.taoMoi);
 router.patch('/:id', giaoDichController.capNhat);
+router.patch('/:id/anh-bang-chung', giaoDichController.capNhatAnhBangChung);
 router.delete('/:id', giaoDichController.xoa);
 
 module.exports = router;

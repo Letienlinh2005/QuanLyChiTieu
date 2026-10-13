@@ -20,7 +20,6 @@ async function ghiNhatKy(req, { hanhDong, doiTuong, maDoiTuong, chiTiet }) {
     }
 }
 
-// TỔNG QUAN
 exports.layThongKeTongQuan = async (req, res) => {
     try {
         const [[tk1]] = await pool.query(
